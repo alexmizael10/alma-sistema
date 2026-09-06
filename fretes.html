@@ -10,6 +10,9 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 <style>
   :root{
     --bg: #F1F1EC;
@@ -83,6 +86,39 @@
   }
 
   main{ max-width: 1180px; margin: 0 auto; padding: 26px 24px 0; }
+
+  /* ---------- Tela de login ---------- */
+  .tela-login{
+    position: fixed; inset: 0;
+    background: var(--asfalto);
+    display:flex; align-items:center; justify-content:center;
+    padding: 20px; z-index: 2000;
+  }
+  .login-card{
+    background: var(--paper);
+    border-radius: 12px;
+    padding: 36px 30px;
+    max-width: 360px; width: 100%;
+    text-align: center;
+    box-shadow: 0 20px 60px rgba(0,0,0,.35);
+  }
+  .login-logo{ font-size: 34px; margin-bottom: 6px; }
+  .login-card h2{ font-family:'Oswald', sans-serif; font-size: 19px; margin: 0 0 6px; }
+  .login-card p{ font-size: 12.5px; color: var(--ink-soft); margin: 0 0 18px; }
+  .login-card input{
+    width: 100%; box-sizing: border-box;
+    border: 1px solid var(--line); border-radius: 6px;
+    padding: 10px 12px; font-size: 14px; margin-bottom: 10px;
+    font-family: inherit;
+  }
+  .login-card button{
+    width: 100%; border: none; border-radius: 6px;
+    background: var(--rodovia); color: #fff;
+    font-weight: 600; font-size: 14px; padding: 11px; cursor: pointer;
+  }
+  .login-card button:hover{ background: var(--rodovia-dark); }
+  .login-card button:disabled{ background: #A9AFA9; cursor: not-allowed; }
+  .login-erro{ color: var(--red); font-size: 12.5px; margin-top: 10px; min-height: 16px; }
 
   /* ---------- Navegação por abas ---------- */
   .tabs-nav{
@@ -524,9 +560,28 @@
 </head>
 <body>
 
+<div id="tela-login" class="tela-login">
+  <div class="login-card">
+    <div class="login-logo">🚛</div>
+    <h2>ALMA TRANSPORTES</h2>
+    <p>Entre com seu e-mail e senha para acessar os dados na nuvem.</p>
+    <input type="email" id="loginEmail" placeholder="E-mail" autocomplete="username">
+    <input type="password" id="loginSenha" placeholder="Senha" autocomplete="current-password">
+    <button type="button" id="btn-login">Entrar</button>
+    <div id="loginErro" class="login-erro"></div>
+  </div>
+</div>
+
+<div id="app-conteudo" style="display:none;">
 <header>
   <div class="inner">
-    <a href="index.html" style="display:inline-flex; align-items:center; gap:6px; color:#C7CBC5; text-decoration:none; font-size:13px; margin-bottom:10px;">← Menu ALMA</a>
+    <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px;">
+      <a href="index.html" style="display:inline-flex; align-items:center; gap:6px; color:#C7CBC5; text-decoration:none; font-size:13px; margin-bottom:10px;">← Menu ALMA</a>
+      <div style="display:flex; align-items:center; gap:12px;">
+        <span id="cloud-status" style="font-size:12px; color:#C7CBC5;"></span>
+        <button type="button" id="btn-logout" style="background:transparent; border:1px solid #4b5a55; color:#C7CBC5; font-size:12px; padding:4px 10px; border-radius:5px; cursor:pointer;">Sair</button>
+      </div>
+    </div>
     <h1><span class="mark">GO</span>Controle de Fretes</h1>
     <p>Cadastre clientes, rotas e valores. A distância é calculada automaticamente pela rota rodoviária real assim que você preenche origem e destino.</p>
     <div class="estrada"></div>
@@ -921,8 +976,55 @@
 </footer>
 
 <div id="area-impressao"></div>
+</div>
 
 <script>
+// ---------- Conexão com a nuvem (Firebase) — compartilhado entre os 4 sistemas ALMA ----------
+const AlmaNuvem = (function(){
+  const firebaseConfig = {
+    apiKey: "AIzaSyAkTfgLDLIe7q7n3Pzix_50Sz-hMiyAlkU",
+    authDomain: "sistema-alma-tratores.firebaseapp.com",
+    projectId: "sistema-alma-tratores",
+    storageBucket: "sistema-alma-tratores.firebasestorage.app",
+    messagingSenderId: "904624946557",
+    appId: "1:904624946557:web:87ba09360ffbd187156014"
+  };
+  if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const db = firebase.firestore();
+  const colecao = db.collection('alma_data');
+  const timers = {};
+
+  function setStatus(texto, cor){
+    const el = document.getElementById('cloud-status');
+    if (el){ el.textContent = texto; el.style.color = cor || '#C7CBC5'; }
+  }
+
+  return {
+    async carregar(docId){
+      try{
+        const snap = await colecao.doc(docId).get();
+        return snap.exists ? snap.data() : null;
+      }catch(e){
+        setStatus('Sem conexão com a nuvem', '#f59e0b');
+        return null;
+      }
+    },
+    salvar(docId, dados){
+      clearTimeout(timers[docId]);
+      setStatus('Salvando…');
+      timers[docId] = setTimeout(() => {
+        colecao.doc(docId).set(dados)
+          .then(() => setStatus('Salvo na nuvem ✓', '#4ade80'))
+          .catch(() => setStatus('Erro ao salvar — verifique a internet', '#f87171'));
+      }, 800);
+    },
+    login(email, senha){ return auth.signInWithEmailAndPassword(email, senha); },
+    logout(){ return auth.signOut(); },
+    aoMudarLogin(cb){ auth.onAuthStateChanged(cb); },
+  };
+})();
+
 (function(){
   let fretes = [];
   let contador = 1;
@@ -936,14 +1038,33 @@
 
   const CHAVE_STORAGE = 'controleFretesDados_v1';
 
+  function coletarDadosParaSalvar(){
+    return { fretes, contador, clientes, contadorCliente, proximoNumeroOficial, emissorNome, emissorContato };
+  }
+
+  function aplicarDadosCarregados(dados){
+    fretes = dados.fretes || [];
+    contador = dados.contador || (fretes.reduce((m,f) => Math.max(m, f.id || 0), 0) + 1);
+    clientes = Array.isArray(dados.clientes) ? dados.clientes : [];
+    contadorCliente = dados.contadorCliente || (clientes.reduce((m,c) => Math.max(m, c.id || 0), 0) + 1);
+    proximoNumeroOficial = dados.proximoNumeroOficial || 1;
+    emissorNome = dados.emissorNome || '';
+    emissorContato = dados.emissorContato || '';
+    document.getElementById('pdf-emissor-nome').value = emissorNome;
+    document.getElementById('pdf-emissor-contato').value = emissorContato;
+    migrarClientesAntigos();
+    ajustarProximoNumeroOficial();
+    migrarStatusAntigo();
+  }
+
   function salvarLocal(){
+    const payload = coletarDadosParaSalvar();
     try{
-      localStorage.setItem(CHAVE_STORAGE, JSON.stringify({
-        fretes, contador, clientes, contadorCliente, proximoNumeroOficial, emissorNome, emissorContato
-      }));
+      localStorage.setItem(CHAVE_STORAGE, JSON.stringify(payload));
     }catch(e){
       // localStorage indisponível (navegação privada, ou pré-visualização dentro do Claude) — segue só em memória
     }
+    AlmaNuvem.salvar('fretes_dados', payload);
   }
 
   function carregarLocal(){
@@ -952,18 +1073,7 @@
       if (!bruto) return false;
       const dados = JSON.parse(bruto);
       if (dados && Array.isArray(dados.fretes)){
-        fretes = dados.fretes;
-        contador = dados.contador || (fretes.reduce((m,f) => Math.max(m, f.id || 0), 0) + 1);
-        clientes = Array.isArray(dados.clientes) ? dados.clientes : [];
-        contadorCliente = dados.contadorCliente || (clientes.reduce((m,c) => Math.max(m, c.id || 0), 0) + 1);
-        proximoNumeroOficial = dados.proximoNumeroOficial || 1;
-        emissorNome = dados.emissorNome || '';
-        emissorContato = dados.emissorContato || '';
-        document.getElementById('pdf-emissor-nome').value = emissorNome;
-        document.getElementById('pdf-emissor-contato').value = emissorContato;
-        migrarClientesAntigos();
-        ajustarProximoNumeroOficial();
-        migrarStatusAntigo();
+        aplicarDadosCarregados(dados);
         return true;
       }
     }catch(e){}
@@ -2329,15 +2439,58 @@
   try{ abaInicial = localStorage.getItem('fretesAbaAtiva') || 'lancamentos'; }catch(e){}
   irParaPagina('lancamentos'); // o mapa precisa estar visível para inicializar corretamente
 
-  carregarLocal();
-  try{
-    initMapa();
-  }catch(e){
-    mapaDisponivel = false;
-    mostrarMapaIndisponivel();
+  async function iniciarApp(){
+    carregarLocal();
+    const dadosNuvem = await AlmaNuvem.carregar('fretes_dados');
+    if (dadosNuvem && Array.isArray(dadosNuvem.fretes)){
+      aplicarDadosCarregados(dadosNuvem);
+      try{ localStorage.setItem(CHAVE_STORAGE, JSON.stringify(dadosNuvem)); }catch(e){}
+    } else if (fretes.length || clientes.length){
+      AlmaNuvem.salvar('fretes_dados', coletarDadosParaSalvar());
+    }
+    try{
+      initMapa();
+    }catch(e){
+      mapaDisponivel = false;
+      mostrarMapaIndisponivel();
+    }
+    render();
+    irParaPagina(abaInicial); // agora sim, restaura a aba que o usuário deixou ativa
   }
-  render();
-  irParaPagina(abaInicial); // agora sim, restaura a aba que o usuário deixou ativa
+
+  function fazerLoginApp(){
+    const email = document.getElementById('loginEmail').value.trim();
+    const senha = document.getElementById('loginSenha').value;
+    const erroEl = document.getElementById('loginErro');
+    const btn = document.getElementById('btn-login');
+    erroEl.textContent = '';
+    btn.disabled = true;
+    btn.textContent = 'Entrando…';
+    AlmaNuvem.login(email, senha).catch(() => {
+      erroEl.textContent = 'E-mail ou senha incorretos.';
+    }).finally(() => {
+      btn.disabled = false;
+      btn.textContent = 'Entrar';
+    });
+  }
+  document.getElementById('btn-login').addEventListener('click', fazerLoginApp);
+  document.getElementById('loginSenha').addEventListener('keydown', e => { if (e.key === 'Enter') fazerLoginApp(); });
+  document.getElementById('btn-logout').addEventListener('click', () => AlmaNuvem.logout());
+
+  let appIniciado = false;
+  AlmaNuvem.aoMudarLogin(user => {
+    const telaLogin = document.getElementById('tela-login');
+    const appConteudo = document.getElementById('app-conteudo');
+    if (user){
+      telaLogin.style.display = 'none';
+      appConteudo.style.display = 'block';
+      if (!appIniciado){ appIniciado = true; iniciarApp(); }
+    } else {
+      telaLogin.style.display = 'flex';
+      appConteudo.style.display = 'none';
+      appIniciado = false;
+    }
+  });
 })();
 </script>
 

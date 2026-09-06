@@ -4,6 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Inventário - ALMA TRATORES</title>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 <style>
     :root { --primary: #1e293b; --secondary: #64748b; --accent: #1e40af; --bg: #ffffff; }
 
@@ -25,6 +28,30 @@
         font-size: 0.8rem; color: var(--secondary); text-decoration: none;
     }
     .voltar-menu:hover { color: var(--accent); }
+
+    /* ---------- Tela de login ---------- */
+    .tela-login{
+        position: fixed; inset: 0; background: var(--primary);
+        display:flex; align-items:center; justify-content:center; padding: 20px; z-index: 2000;
+    }
+    .login-card{
+        background: #fff; border-radius: 8px; padding: 36px 30px;
+        max-width: 360px; width: 100%; text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,.35);
+    }
+    .login-logo{ font-size: 34px; margin-bottom: 6px; }
+    .login-card h2{ font-size: 19px; margin: 0 0 6px; color: var(--primary); }
+    .login-card p{ font-size: 12.5px; color: var(--secondary); margin: 0 0 18px; }
+    .login-card input{
+        width: 100%; box-sizing: border-box; border: 1px solid #e2e8f0; border-radius: 4px;
+        padding: 10px 12px; font-size: 14px; margin-bottom: 10px; font-family: inherit;
+    }
+    .login-card button{
+        width: 100%; border: none; border-radius: 4px; background: var(--accent); color: #fff;
+        font-weight: 700; font-size: 14px; padding: 11px; cursor: pointer;
+    }
+    .login-card button:hover{ background: #1c3a94; }
+    .login-card button:disabled{ background: #94a3b8; cursor: not-allowed; }
+    .login-erro{ color: #dc2626; font-size: 12.5px; margin-top: 10px; min-height: 16px; }
 
     .container {
         max-width: 900px;
@@ -65,7 +92,27 @@
 </head>
 <body>
 
-<a href="tratores.html" class="voltar-menu">← Menu ALMA TRATORES</a>
+<div id="tela-login" class="tela-login">
+  <div class="login-card">
+    <div class="login-logo">📦</div>
+    <h2>ALMA TRATORES</h2>
+    <p>Entre com seu e-mail e senha para acessar os dados na nuvem.</p>
+    <input type="email" id="loginEmail" placeholder="E-mail" autocomplete="username">
+    <input type="password" id="loginSenha" placeholder="Senha" autocomplete="current-password">
+    <button type="button" id="btn-login">Entrar</button>
+    <div id="loginErro" class="login-erro"></div>
+  </div>
+</div>
+
+<div id="app-conteudo" style="display:none;">
+
+<div style="max-width:900px; margin:0 auto; display:flex; justify-content:space-between; align-items:center;">
+    <a href="tratores.html" class="voltar-menu" style="margin:0;">← Menu ALMA TRATORES</a>
+    <div style="display:flex; align-items:center; gap:12px;">
+        <span id="cloud-status" style="font-size:12px; color:var(--secondary);"></span>
+        <button type="button" id="btn-logout" style="background:transparent; border:1px solid #cbd5e1; color:var(--secondary); font-size:12px; padding:4px 10px; border-radius:4px; cursor:pointer;">Sair</button>
+    </div>
+</div>
 
 <div class="container">
     <h1>📦 Inventário de Máquinas</h1>
@@ -115,7 +162,55 @@
     <div id="vazioMaquinas" style="display:none; text-align:center; color:var(--secondary); padding:30px;">Nenhuma máquina cadastrada ainda.</div>
 </div>
 
+</div>
+
 <script>
+// ---------- Conexão com a nuvem (Firebase) — compartilhado entre os sistemas ALMA ----------
+const AlmaNuvem = (function(){
+  const firebaseConfig = {
+    apiKey: "AIzaSyAkTfgLDLIe7q7n3Pzix_50Sz-hMiyAlkU",
+    authDomain: "sistema-alma-tratores.firebaseapp.com",
+    projectId: "sistema-alma-tratores",
+    storageBucket: "sistema-alma-tratores.firebasestorage.app",
+    messagingSenderId: "904624946557",
+    appId: "1:904624946557:web:87ba09360ffbd187156014"
+  };
+  if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const db = firebase.firestore();
+  const colecao = db.collection('alma_data');
+  const timers = {};
+
+  function setStatus(texto, cor){
+    const el = document.getElementById('cloud-status');
+    if (el){ el.textContent = texto; el.style.color = cor || 'var(--secondary)'; }
+  }
+
+  return {
+    async carregar(docId){
+      try{
+        const snap = await colecao.doc(docId).get();
+        return snap.exists ? snap.data() : null;
+      }catch(e){
+        setStatus('Sem conexão com a nuvem', '#f59e0b');
+        return null;
+      }
+    },
+    salvar(docId, dados){
+      clearTimeout(timers[docId]);
+      setStatus('Salvando…');
+      timers[docId] = setTimeout(() => {
+        colecao.doc(docId).set(dados)
+          .then(() => setStatus('Salvo na nuvem ✓', '#16a34a'))
+          .catch(() => setStatus('Erro ao salvar — verifique a internet', '#dc2626'));
+      }, 800);
+    },
+    login(email, senha){ return auth.signInWithEmailAndPassword(email, senha); },
+    logout(){ return auth.signOut(); },
+    aoMudarLogin(cb){ auth.onAuthStateChanged(cb); },
+  };
+})();
+
     function escapeAttrOS(s) {
         return String(s ?? '').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
     }
@@ -135,7 +230,9 @@
         } catch (e) { maquinas = []; contadorMaquina = 1; }
     }
     function salvarMaquinasLocal() {
-        try { localStorage.setItem(CHAVE_MAQUINAS, JSON.stringify({ maquinas, contador: contadorMaquina })); } catch (e) {}
+        const payload = { maquinas, contador: contadorMaquina };
+        try { localStorage.setItem(CHAVE_MAQUINAS, JSON.stringify(payload)); } catch (e) {}
+        AlmaNuvem.salvar('inventario_maquinas', payload);
     }
 
     function limparFormMaquina() {
@@ -229,8 +326,52 @@
     }
 
     // ---------- Inicialização ----------
-    carregarMaquinas();
-    renderMaquinas();
+    async function iniciarApp() {
+        carregarMaquinas();
+        const dadosNuvem = await AlmaNuvem.carregar('inventario_maquinas');
+        if (dadosNuvem && Array.isArray(dadosNuvem.maquinas)) {
+            maquinas = dadosNuvem.maquinas;
+            contadorMaquina = dadosNuvem.contador || 1;
+            try { localStorage.setItem(CHAVE_MAQUINAS, JSON.stringify(dadosNuvem)); } catch (e) {}
+        } else if (maquinas.length) {
+            AlmaNuvem.salvar('inventario_maquinas', { maquinas, contador: contadorMaquina });
+        }
+        renderMaquinas();
+    }
+
+    function fazerLoginApp() {
+        const email = document.getElementById('loginEmail').value.trim();
+        const senha = document.getElementById('loginSenha').value;
+        const erroEl = document.getElementById('loginErro');
+        const btn = document.getElementById('btn-login');
+        erroEl.textContent = '';
+        btn.disabled = true;
+        btn.textContent = 'Entrando…';
+        AlmaNuvem.login(email, senha).catch(() => {
+            erroEl.textContent = 'E-mail ou senha incorretos.';
+        }).finally(() => {
+            btn.disabled = false;
+            btn.textContent = 'Entrar';
+        });
+    }
+    document.getElementById('btn-login').addEventListener('click', fazerLoginApp);
+    document.getElementById('loginSenha').addEventListener('keydown', e => { if (e.key === 'Enter') fazerLoginApp(); });
+    document.getElementById('btn-logout').addEventListener('click', () => AlmaNuvem.logout());
+
+    let appIniciado = false;
+    AlmaNuvem.aoMudarLogin(user => {
+        const telaLogin = document.getElementById('tela-login');
+        const appConteudo = document.getElementById('app-conteudo');
+        if (user) {
+            telaLogin.style.display = 'none';
+            appConteudo.style.display = 'block';
+            if (!appIniciado) { appIniciado = true; iniciarApp(); }
+        } else {
+            telaLogin.style.display = 'flex';
+            appConteudo.style.display = 'none';
+            appIniciado = false;
+        }
+    });
 </script>
 </body>
 </html>

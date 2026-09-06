@@ -4,6 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Contratos de Consignação - ALMA TRATORES</title>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 <style>
     :root { --primary: #1e293b; --secondary: #64748b; --accent: #1e40af; --bg: #ffffff; }
 
@@ -25,6 +28,30 @@
         font-size: 0.8rem; color: var(--secondary); text-decoration: none;
     }
     .voltar-menu:hover { color: var(--accent); }
+
+    /* ---------- Tela de login ---------- */
+    .tela-login{
+        position: fixed; inset: 0; background: var(--primary);
+        display:flex; align-items:center; justify-content:center; padding: 20px; z-index: 2000;
+    }
+    .login-card{
+        background: #fff; border-radius: 8px; padding: 36px 30px;
+        max-width: 360px; width: 100%; text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,.35);
+    }
+    .login-logo{ font-size: 34px; margin-bottom: 6px; }
+    .login-card h2{ font-size: 19px; margin: 0 0 6px; color: var(--primary); }
+    .login-card p{ font-size: 12.5px; color: var(--secondary); margin: 0 0 18px; }
+    .login-card input{
+        width: 100%; box-sizing: border-box; border: 1px solid #e2e8f0; border-radius: 4px;
+        padding: 10px 12px; font-size: 14px; margin-bottom: 10px; font-family: inherit;
+    }
+    .login-card button{
+        width: 100%; border: none; border-radius: 4px; background: var(--accent); color: #fff;
+        font-weight: 700; font-size: 14px; padding: 11px; cursor: pointer;
+    }
+    .login-card button:hover{ background: #1c3a94; }
+    .login-card button:disabled{ background: #94a3b8; cursor: not-allowed; }
+    .login-erro{ color: #dc2626; font-size: 12.5px; margin-top: 10px; min-height: 16px; }
 
     .container {
         max-width: 900px;
@@ -88,7 +115,27 @@
 </head>
 <body>
 
-<a href="tratores.html" class="voltar-menu">← Menu ALMA TRATORES</a>
+<div id="tela-login" class="tela-login">
+  <div class="login-card">
+    <div class="login-logo">📜</div>
+    <h2>ALMA TRATORES</h2>
+    <p>Entre com seu e-mail e senha para acessar os dados na nuvem.</p>
+    <input type="email" id="loginEmail" placeholder="E-mail" autocomplete="username">
+    <input type="password" id="loginSenha" placeholder="Senha" autocomplete="current-password">
+    <button type="button" id="btn-login">Entrar</button>
+    <div id="loginErro" class="login-erro"></div>
+  </div>
+</div>
+
+<div id="app-conteudo" style="display:none;">
+
+<div style="max-width:900px; margin:0 auto; display:flex; justify-content:space-between; align-items:center;">
+    <a href="tratores.html" class="voltar-menu" style="margin:0;">← Menu ALMA TRATORES</a>
+    <div style="display:flex; align-items:center; gap:12px;" class="no-print-btn">
+        <span id="cloud-status" style="font-size:12px; color:var(--secondary);"></span>
+        <button type="button" id="btn-logout" style="background:transparent; border:1px solid #cbd5e1; color:var(--secondary); font-size:12px; padding:4px 10px; border-radius:4px; cursor:pointer;">Sair</button>
+    </div>
+</div>
 
 <nav class="tabs-nav-os" id="tabs-nav-consig">
     <button class="tab-btn-os ativa" data-pagina="novo">📄 Novo Contrato</button>
@@ -179,7 +226,55 @@
 
 <div id="area-impressao-consig"></div>
 
+</div>
+
 <script>
+// ---------- Conexão com a nuvem (Firebase) — compartilhado entre os sistemas ALMA ----------
+const AlmaNuvem = (function(){
+  const firebaseConfig = {
+    apiKey: "AIzaSyAkTfgLDLIe7q7n3Pzix_50Sz-hMiyAlkU",
+    authDomain: "sistema-alma-tratores.firebaseapp.com",
+    projectId: "sistema-alma-tratores",
+    storageBucket: "sistema-alma-tratores.firebasestorage.app",
+    messagingSenderId: "904624946557",
+    appId: "1:904624946557:web:87ba09360ffbd187156014"
+  };
+  if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const db = firebase.firestore();
+  const colecao = db.collection('alma_data');
+  const timers = {};
+
+  function setStatus(texto, cor){
+    const el = document.getElementById('cloud-status');
+    if (el){ el.textContent = texto; el.style.color = cor || 'var(--secondary)'; }
+  }
+
+  return {
+    async carregar(docId){
+      try{
+        const snap = await colecao.doc(docId).get();
+        return snap.exists ? snap.data() : null;
+      }catch(e){
+        setStatus('Sem conexão com a nuvem', '#f59e0b');
+        return null;
+      }
+    },
+    salvar(docId, dados){
+      clearTimeout(timers[docId]);
+      setStatus('Salvando…');
+      timers[docId] = setTimeout(() => {
+        colecao.doc(docId).set(dados)
+          .then(() => setStatus('Salvo na nuvem ✓', '#16a34a'))
+          .catch(() => setStatus('Erro ao salvar — verifique a internet', '#dc2626'));
+      }, 800);
+    },
+    login(email, senha){ return auth.signInWithEmailAndPassword(email, senha); },
+    logout(){ return auth.signOut(); },
+    aoMudarLogin(cb){ auth.onAuthStateChanged(cb); },
+  };
+})();
+
     function escapeAttrCG(s) {
         return String(s ?? '').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
     }
@@ -193,39 +288,55 @@
     }
 
     // ---------- Persistência ----------
-    const CHAVE_CONTADOR_CG = 'contConsignacao_Alma';
     const CHAVE_CONTRATOS = 'contratosConsignacao_Alma';
     const CHAVE_EMPRESA_CG = 'consignatarioPadrao_Alma';
     const CHAVE_CLIENTES_OS = 'clientesOS_Alma';
     const CHAVE_MAQUINAS = 'maquinasOS_Alma';
 
     let contratos = [];
+    let contadorContrato = 1;
     let contratoEditandoId = null;
     let clientesOS = [];
     let maquinas = [];
 
     function obterContadorContrato() {
-        const bruto = localStorage.getItem(CHAVE_CONTADOR_CG);
-        const n = parseInt(bruto, 10);
-        return (!bruto || isNaN(n) || n < 1) ? 1 : n;
+        return contadorContrato;
     }
 
     function carregarContratos() {
         try {
             const bruto = localStorage.getItem(CHAVE_CONTRATOS);
-            contratos = bruto ? JSON.parse(bruto) : [];
-        } catch (e) { contratos = []; }
+            const dados = bruto ? JSON.parse(bruto) : null;
+            if (dados && Array.isArray(dados.contratos)) {
+                contratos = dados.contratos;
+                contadorContrato = dados.contador || 1;
+            } else if (Array.isArray(dados)) {
+                // formato antigo: só array de contratos; contador ficava em chave separada
+                contratos = dados;
+                const contadorAntigo = parseInt(localStorage.getItem('contConsignacao_Alma'), 10);
+                contadorContrato = (!isNaN(contadorAntigo) && contadorAntigo >= 1) ? contadorAntigo : 1;
+            } else {
+                contratos = [];
+                contadorContrato = 1;
+            }
+        } catch (e) { contratos = []; contadorContrato = 1; }
     }
     function salvarContratosLocal() {
-        try { localStorage.setItem(CHAVE_CONTRATOS, JSON.stringify(contratos)); } catch (e) {}
+        const payload = { contratos, contador: contadorContrato };
+        try { localStorage.setItem(CHAVE_CONTRATOS, JSON.stringify(payload)); } catch (e) {}
+        AlmaNuvem.salvar('consignacao_dados', payload);
     }
 
-    function carregarClientesParaSelect() {
+    async function carregarClientesParaSelect() {
         try {
             const bruto = localStorage.getItem(CHAVE_CLIENTES_OS);
             const dados = bruto ? JSON.parse(bruto) : null;
             clientesOS = dados && Array.isArray(dados.clientes) ? dados.clientes : [];
         } catch (e) { clientesOS = []; }
+        const dadosNuvem = await AlmaNuvem.carregar('os_clientes');
+        if (dadosNuvem && Array.isArray(dadosNuvem.clientes)) {
+            clientesOS = dadosNuvem.clientes;
+        }
         const sel = document.getElementById('cgClienteSelect');
         const ordenados = clientesOS.slice().sort((a,b) => a.nome.localeCompare(b.nome, 'pt-BR'));
         sel.innerHTML = '<option value="">— Selecionar cliente cadastrado (opcional) —</option>' +
@@ -242,12 +353,16 @@
         document.getElementById('cgConsignanteTelefone').value = c.celular || '';
     }
 
-    function carregarMaquinasParaSelect() {
+    async function carregarMaquinasParaSelect() {
         try {
             const bruto = localStorage.getItem(CHAVE_MAQUINAS);
             const dados = bruto ? JSON.parse(bruto) : null;
             maquinas = dados && Array.isArray(dados.maquinas) ? dados.maquinas : [];
         } catch (e) { maquinas = []; }
+        const dadosNuvem = await AlmaNuvem.carregar('inventario_maquinas');
+        if (dadosNuvem && Array.isArray(dadosNuvem.maquinas)) {
+            maquinas = dadosNuvem.maquinas;
+        }
         const sel = document.getElementById('cgMaquinaSelect');
         sel.innerHTML = '<option value="">— Selecionar máquina cadastrada (opcional) —</option>' +
             maquinas.map(m => `<option value="${m.id}">${escapeAttrCG(m.tipo)} ${escapeAttrCG(m.marca)} ${escapeAttrCG(m.modelo)}</option>`).join('');
@@ -266,7 +381,7 @@
         if (m.valor) document.getElementById('cgValorMinimo').value = m.valor;
     }
 
-    function carregarConsignatarioPadrao() {
+    async function carregarConsignatarioPadrao() {
         try {
             const bruto = localStorage.getItem(CHAVE_EMPRESA_CG);
             const dados = bruto ? JSON.parse(bruto) : null;
@@ -277,6 +392,15 @@
                 document.getElementById('cgConsignatarioTelefone').value = dados.telefone || '';
             }
         } catch (e) {}
+        const dadosNuvem = await AlmaNuvem.carregar('consignacao_consignatario');
+        if (dadosNuvem) {
+            document.getElementById('cgConsignatarioNome').value = dadosNuvem.nome || '';
+            document.getElementById('cgConsignatarioDoc').value = dadosNuvem.doc || '';
+            document.getElementById('cgConsignatarioEndereco').value = dadosNuvem.endereco || '';
+            document.getElementById('cgConsignatarioTelefone').value = dadosNuvem.telefone || '';
+        } else {
+            salvarConsignatarioPadrao();
+        }
     }
     function salvarConsignatarioPadrao() {
         const dados = {
@@ -286,6 +410,7 @@
             telefone: document.getElementById('cgConsignatarioTelefone').value.trim(),
         };
         try { localStorage.setItem(CHAVE_EMPRESA_CG, JSON.stringify(dados)); } catch (e) {}
+        AlmaNuvem.salvar('consignacao_consignatario', dados);
     }
     ['cgConsignatarioNome','cgConsignatarioDoc','cgConsignatarioEndereco','cgConsignatarioTelefone'].forEach(id => {
         document.getElementById(id).addEventListener('change', salvarConsignatarioPadrao);
@@ -402,7 +527,7 @@
         if (!c.numero) {
             const atual = obterContadorContrato();
             c.numero = 'CONS-' + String(atual).padStart(4, '0');
-            localStorage.setItem(CHAVE_CONTADOR_CG, String(atual + 1));
+            contadorContrato = atual + 1;
         }
         salvarConsignatarioPadrao();
         salvarContratosLocal();
@@ -527,14 +652,58 @@
     });
 
     // ---------- Inicialização ----------
-    carregarContratos();
-    renderContratos();
-    carregarClientesParaSelect();
-    carregarMaquinasParaSelect();
-    carregarConsignatarioPadrao();
-    document.getElementById('cgDataContrato').valueAsDate = new Date();
-    document.getElementById('cgDataInicio').valueAsDate = new Date();
-    recalcularDataFim();
+    async function iniciarApp() {
+        carregarContratos();
+        const dadosNuvem = await AlmaNuvem.carregar('consignacao_dados');
+        if (dadosNuvem && Array.isArray(dadosNuvem.contratos)) {
+            contratos = dadosNuvem.contratos;
+            contadorContrato = dadosNuvem.contador || 1;
+            try { localStorage.setItem(CHAVE_CONTRATOS, JSON.stringify(dadosNuvem)); } catch (e) {}
+        } else if (contratos.length) {
+            AlmaNuvem.salvar('consignacao_dados', { contratos, contador: contadorContrato });
+        }
+        renderContratos();
+        await carregarClientesParaSelect();
+        await carregarMaquinasParaSelect();
+        await carregarConsignatarioPadrao();
+        document.getElementById('cgDataContrato').valueAsDate = new Date();
+        document.getElementById('cgDataInicio').valueAsDate = new Date();
+        recalcularDataFim();
+    }
+
+    function fazerLoginApp() {
+        const email = document.getElementById('loginEmail').value.trim();
+        const senha = document.getElementById('loginSenha').value;
+        const erroEl = document.getElementById('loginErro');
+        const btn = document.getElementById('btn-login');
+        erroEl.textContent = '';
+        btn.disabled = true;
+        btn.textContent = 'Entrando…';
+        AlmaNuvem.login(email, senha).catch(() => {
+            erroEl.textContent = 'E-mail ou senha incorretos.';
+        }).finally(() => {
+            btn.disabled = false;
+            btn.textContent = 'Entrar';
+        });
+    }
+    document.getElementById('btn-login').addEventListener('click', fazerLoginApp);
+    document.getElementById('loginSenha').addEventListener('keydown', e => { if (e.key === 'Enter') fazerLoginApp(); });
+    document.getElementById('btn-logout').addEventListener('click', () => AlmaNuvem.logout());
+
+    let appIniciado = false;
+    AlmaNuvem.aoMudarLogin(user => {
+        const telaLogin = document.getElementById('tela-login');
+        const appConteudo = document.getElementById('app-conteudo');
+        if (user) {
+            telaLogin.style.display = 'none';
+            appConteudo.style.display = 'block';
+            if (!appIniciado) { appIniciado = true; iniciarApp(); }
+        } else {
+            telaLogin.style.display = 'flex';
+            appConteudo.style.display = 'none';
+            appIniciado = false;
+        }
+    });
 </script>
 </body>
 </html>
