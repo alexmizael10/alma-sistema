@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ALMA TRATORES</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink: #1e293b;
+    --ink-soft: #64748b;
+    --line: #e2e8f0;
+    --paper: #FFFFFF;
+    --os: #1e40af;
+    --os-dark: #1e293b;
+    --inventario: #b45309;
+    --inventario-dark: #7c3210;
+    --contrato: #0f766e;
+    --contrato-dark: #0b5852;
+  }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; height:100%; }
+  body{
+    color: var(--ink);
+    font-family: 'IBM Plex Sans', system-ui, sans-serif;
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding: 32px 20px;
+    position: relative;
+    background-color: #EEF1F6;
+    background-image:
+        linear-gradient(rgba(30,64,175,0.055) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(30,64,175,0.055) 1px, transparent 1px);
+    background-size: 28px 28px;
+  }
+
+  .voltar-menu{
+    position: fixed; top: 22px; left: 22px;
+    display:inline-flex; align-items:center; gap:6px;
+    font-size: 13px; color: var(--ink-soft); text-decoration:none;
+  }
+  .voltar-menu:hover{ color: var(--os); }
+
+  .tela{ max-width: 1000px; width:100%; text-align:center; }
+  .marca{
+    font-family:'Oswald', sans-serif;
+    font-size: 14px;
+    font-weight:600;
+    letter-spacing: 0.25em;
+    color: var(--ink-soft);
+    margin-bottom: 6px;
+  }
+  h1{
+    font-family:'Oswald', sans-serif;
+    font-size: 28px;
+    font-weight:600;
+    margin: 0 0 40px;
+    color: var(--ink);
+  }
+
+  .cards{
+    display:grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 22px;
+  }
+  .card{
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 40px 26px;
+    text-decoration:none;
+    color: inherit;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    text-align:center;
+    transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease;
+    position:relative;
+    overflow:hidden;
+  }
+  .card::before{
+    content:'';
+    position:absolute; top:0; left:0; right:0; height:5px;
+  }
+  .card.os::before{ background: var(--os); }
+  .card.inventario::before{ background: var(--inventario); }
+  .card.contrato::before{ background: var(--contrato); }
+  .card:hover{
+    transform: translateY(-4px);
+    box-shadow: 0 16px 32px rgba(30,41,59,.12);
+  }
+  .card.os:hover{ border-color: var(--os); }
+  .card.inventario:hover{ border-color: var(--inventario); }
+  .card.contrato:hover{ border-color: var(--contrato); }
+
+  .icone{
+    width: 62px; height:62px;
+    border-radius: 50%;
+    display:flex; align-items:center; justify-content:center;
+    font-size: 28px;
+    margin-bottom: 18px;
+  }
+  .card.os .icone{ background: #EAF0FE; }
+  .card.inventario .icone{ background: #FDF1E3; }
+  .card.contrato .icone{ background: #E4F5F3; }
+
+  .card h2{
+    font-family:'Oswald', sans-serif;
+    font-size: 19px;
+    font-weight:600;
+    margin: 0 0 8px;
+    letter-spacing: 0.02em;
+  }
+  .card.os h2{ color: var(--os-dark); }
+  .card.inventario h2{ color: var(--inventario-dark); }
+  .card.contrato h2{ color: var(--contrato-dark); }
+
+  .card p{
+    font-size: 13px;
+    color: var(--ink-soft);
+    margin: 0;
+    line-height:1.5;
+  }
+
+  @media (max-width: 760px){
+    .cards{ grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+  <a href="index.html" class="voltar-menu">← Menu ALMA</a>
+
+  <div class="tela">
+    <div class="marca">ALMA TRATORES</div>
+    <h1>O que você precisa fazer?</h1>
+
+    <div class="cards">
+      <a class="card os" href="os.html">
+        <div class="icone">📝</div>
+        <h2>Ordens de Serviço</h2>
+        <p>Emitir, salvar e acompanhar OS — peças, mão de obra e clientes.</p>
+      </a>
+
+      <a class="card inventario" href="inventario.html">
+        <div class="icone">📦</div>
+        <h2>Inventário</h2>
+        <p>Máquinas disponíveis para venda no pátio.</p>
+      </a>
+
+      <a class="card contrato" href="consignacao.html">
+        <div class="icone">📜</div>
+        <h2>Contratos de Consignação</h2>
+        <p>Gerar, salvar e imprimir contratos de consignação de máquinas.</p>
+      </a>
+    </div>
+  </div>
+
+</body>
+</html>

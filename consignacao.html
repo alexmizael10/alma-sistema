@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Contratos de Consignação - ALMA TRATORES</title>
+<style>
+    :root { --primary: #1e293b; --secondary: #64748b; --accent: #1e40af; --bg: #ffffff; }
+
+    body {
+        font-family: 'Segoe UI', Arial, sans-serif;
+        color: #334155;
+        margin: 0;
+        padding: 20px;
+        background-color: #EEF1F6;
+        background-image:
+            linear-gradient(rgba(30,64,175,0.055) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(30,64,175,0.055) 1px, transparent 1px);
+        background-size: 28px 28px;
+    }
+
+    .voltar-menu {
+        display: inline-flex; align-items: center; gap: 6px;
+        max-width: 900px; margin: 0 auto 12px; padding: 0 4px;
+        font-size: 0.8rem; color: var(--secondary); text-decoration: none;
+    }
+    .voltar-menu:hover { color: var(--accent); }
+
+    .container {
+        max-width: 900px;
+        background: white;
+        padding: 50px;
+        border-radius: 4px;
+        box-shadow: 0 0 20px rgba(0,0,0,0.05);
+        margin: 0 auto 24px;
+    }
+    .resumo-container { min-height: auto; }
+
+    h1 { color: var(--primary); margin: 0 0 6px; font-size: 1.8rem; letter-spacing: -1px; }
+    h3 { color: var(--primary); font-size: 1rem; border-bottom: 2px solid #f1f5f9; padding-bottom: 8px; margin-top: 34px; }
+    .subtitulo { color: var(--secondary); font-size: 0.85rem; margin-bottom: 26px; }
+
+    .grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; margin-bottom: 15px; }
+    .field-group { display: flex; flex-direction: column; }
+    label { font-size: 0.7rem; font-weight: 700; color: var(--secondary); text-transform: uppercase; margin-bottom: 4px; }
+    input, select, textarea { border: 1px solid #e2e8f0; padding: 8px; font-size: 0.9rem; color: #1e293b; border-radius: 2px; width: 100%; box-sizing: border-box; font-family: inherit; }
+    textarea { resize: vertical; }
+
+    table { width: 100%; border-collapse: collapse; margin-top: 5px; }
+    th { background: #f8fafc; text-align: left; padding: 10px; font-size: 0.7rem; color: #475569; border: 1px solid #e2e8f0; text-transform: uppercase; }
+    td { border: 1px solid #e2e8f0; padding: 10px; font-size: 0.85rem; }
+
+    .tabs-nav-os { max-width: 900px; margin: 0 auto 16px; display: flex; gap: 4px; border-bottom: 1px solid #cbd5e1; }
+    .tab-btn-os { border: none; background: transparent; font-family: 'Segoe UI', Arial, sans-serif; font-size: 0.85rem; font-weight: 700; color: var(--secondary); padding: 10px 16px; cursor: pointer; border-bottom: 3px solid transparent; margin-bottom: -1px; }
+    .tab-btn-os:hover { color: var(--primary); }
+    .tab-btn-os.ativa { color: var(--accent); border-bottom-color: var(--accent); }
+    .pagina-os { display: none; }
+    .pagina-os.ativa { display: block; }
+
+    .acoes-os { display: flex; gap: 10px; margin-top: 34px; }
+    .btn-secundario-os { background: #f1f5f9; color: var(--primary); border: 1px solid #e2e8f0; padding: 15px 20px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 0.9rem; }
+    .btn-secundario-os:hover { background: #e2e8f0; }
+    .btn-imprimir { background: var(--accent); color: white; padding: 15px; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 1rem; flex: 1; }
+    .btn-acao-resumo { color: var(--accent); background: none; border: none; cursor: pointer; font-size: 1rem; }
+    .btn-remove { color: #f87171; background: none; border: none; cursor: pointer; font-size: 1.2rem; }
+
+    .aviso-legal { background:#fffbeb; border:1px solid #fde68a; color:#92400e; font-size:0.78rem; padding:12px 16px; border-radius:4px; margin-bottom:24px; }
+
+    #area-impressao-consig { display: none; }
+    @media print {
+        body * { visibility: hidden; }
+        #area-impressao-consig, #area-impressao-consig * { visibility: visible; }
+        #area-impressao-consig { display: block; position: absolute; left: 0; top: 0; width: 100%; padding: 15mm; font-family: Georgia, 'Times New Roman', serif; color: #111; }
+        body { background: white; }
+        @page { size: A4 portrait; margin: 15mm; }
+        .contrato-titulo { text-align: center; font-size: 15px; font-weight: bold; text-transform: uppercase; margin-bottom: 22px; letter-spacing: 0.5px; }
+        .contrato-clausula { font-size: 12.5px; line-height: 1.55; margin-bottom: 12px; text-align: justify; }
+        .contrato-clausula b { font-weight: bold; }
+        .contrato-assinaturas { margin-top: 60px; display: flex; justify-content: space-between; gap: 30px; }
+        .contrato-assinatura-box { flex: 1; text-align: center; font-size: 12px; }
+        .contrato-linha-assinatura { border-top: 1px solid #333; margin-bottom: 6px; padding-top: 6px; }
+        .contrato-testemunhas { margin-top: 50px; display: flex; justify-content: space-between; gap: 30px; font-size: 12px; }
+        .contrato-testemunhas > div { flex: 1; }
+    }
+
+    @media (max-width: 760px){ .grid{ grid-template-columns: 1fr 1fr; } }
+</style>
+</head>
+<body>
+
+<a href="tratores.html" class="voltar-menu">← Menu ALMA TRATORES</a>
+
+<nav class="tabs-nav-os" id="tabs-nav-consig">
+    <button class="tab-btn-os ativa" data-pagina="novo">📄 Novo Contrato</button>
+    <button class="tab-btn-os" data-pagina="lista">📑 Contratos</button>
+</nav>
+
+<section class="pagina-os ativa" data-pagina="novo">
+<div class="container">
+    <h1>Contrato de Consignação</h1>
+    <div class="subtitulo">Nº <span id="numeroContrato" style="font-weight:700; color:var(--accent);">—</span></div>
+
+    <div class="aviso-legal">⚠ Este é um modelo geral de contrato de consignação de máquinas agrícolas, pensado para cobrir os pontos mais comuns (partes, objeto, valor, comissão, prazo, guarda, retirada e foro). Não substitui a orientação de um advogado — revise as cláusulas antes de usar, especialmente se o negócio tiver alguma particularidade.</div>
+
+    <h3>Consignante (dono da máquina)</h3>
+    <div class="grid">
+        <div class="field-group" style="grid-column: span 3;">
+            <label>Cliente cadastrado</label>
+            <select id="cgClienteSelect" onchange="preencherConsignanteSelecionado()">
+                <option value="">— Selecionar cliente cadastrado (opcional) —</option>
+            </select>
+        </div>
+        <div class="field-group" style="grid-column: span 2;"><label>Nome / Razão Social</label><input type="text" id="cgConsignanteNome"></div>
+        <div class="field-group"><label>CPF / CNPJ</label><input type="text" id="cgConsignanteDoc"></div>
+        <div class="field-group"><label>RG (se pessoa física)</label><input type="text" id="cgConsignanteRg"></div>
+        <div class="field-group" style="grid-column: span 2;"><label>Endereço</label><input type="text" id="cgConsignanteEndereco"></div>
+        <div class="field-group"><label>Telefone</label><input type="text" id="cgConsignanteTelefone"></div>
+    </div>
+
+    <h3>Consignatário (quem vai vender)</h3>
+    <div class="grid">
+        <div class="field-group" style="grid-column: span 2;"><label>Nome / Razão Social</label><input type="text" id="cgConsignatarioNome" placeholder="Ex: ALMA TRATORES"></div>
+        <div class="field-group"><label>CPF / CNPJ</label><input type="text" id="cgConsignatarioDoc"></div>
+        <div class="field-group" style="grid-column: span 2;"><label>Endereço</label><input type="text" id="cgConsignatarioEndereco"></div>
+        <div class="field-group"><label>Telefone</label><input type="text" id="cgConsignatarioTelefone"></div>
+    </div>
+
+    <h3>Máquina objeto do contrato</h3>
+    <div class="grid">
+        <div class="field-group" style="grid-column: span 3;">
+            <label>Puxar do inventário</label>
+            <select id="cgMaquinaSelect" onchange="preencherMaquinaSelecionada()">
+                <option value="">— Selecionar máquina cadastrada (opcional) —</option>
+            </select>
+        </div>
+        <div class="field-group"><label>Tipo</label><input type="text" id="cgTipo"></div>
+        <div class="field-group"><label>Marca</label><input type="text" id="cgMarca"></div>
+        <div class="field-group"><label>Modelo</label><input type="text" id="cgModelo"></div>
+        <div class="field-group"><label>Ano</label><input type="text" id="cgAno"></div>
+        <div class="field-group"><label>Nº Série / Chassi</label><input type="text" id="cgSerie"></div>
+        <div class="field-group"><label>Horímetro (h)</label><input type="text" id="cgHorimetro"></div>
+        <div class="field-group" style="grid-column: span 3;"><label>Estado de conservação</label><input type="text" id="cgEstado" placeholder="Ex: bom estado, revisado, pneus novos..."></div>
+        <div class="field-group" style="grid-column: span 3;"><label>Acessórios / implementos inclusos</label><input type="text" id="cgAcessorios"></div>
+    </div>
+
+    <h3>Condições comerciais</h3>
+    <div class="grid">
+        <div class="field-group"><label>Valor mínimo de venda (R$)</label><input type="number" step="0.01" min="0" id="cgValorMinimo"></div>
+        <div class="field-group"><label>Comissão do consignatário (%)</label><input type="number" step="0.1" min="0" id="cgComissao" value="10"></div>
+        <div class="field-group"><label>Prazo de repasse após venda (dias)</label><input type="number" min="0" id="cgPrazoRepasse" value="5"></div>
+        <div class="field-group"><label>Data de início</label><input type="date" id="cgDataInicio"></div>
+        <div class="field-group"><label>Prazo de vigência (dias)</label><input type="number" min="1" id="cgPrazoDias" value="90"></div>
+        <div class="field-group"><label>Data de término</label><input type="date" id="cgDataFim" readonly style="background:#f8fafc;"></div>
+        <div class="field-group" style="grid-column: span 2;"><label>Cidade / Foro</label><input type="text" id="cgCidadeForo" placeholder="Ex: Rio Verde - GO"></div>
+        <div class="field-group"><label>Data do contrato</label><input type="date" id="cgDataContrato"></div>
+        <div class="field-group" style="grid-column: 1 / -1;"><label>Observações / condições adicionais</label><textarea id="cgObservacoes" rows="2" placeholder="Ex: despesas de manutenção durante a consignação ficam por conta de..."></textarea></div>
+    </div>
+
+    <div class="acoes-os no-print-btn">
+        <button type="button" class="btn-secundario-os" onclick="novoContrato()">🆕 Novo</button>
+        <button type="button" class="btn-secundario-os" onclick="salvarContrato()">💾 Salvar</button>
+        <button type="button" class="btn-imprimir" onclick="imprimirContrato()">🖨️ Gerar / Imprimir contrato</button>
+    </div>
+</div>
+</section>
+
+<section class="pagina-os" data-pagina="lista">
+<div class="container resumo-container">
+    <h1 style="margin-bottom: 20px;">Contratos de Consignação</h1>
+    <table>
+        <thead>
+            <tr><th>Nº</th><th>Consignante</th><th>Máquina</th><th>Início</th><th>Término</th><th style="width:100px;"></th></tr>
+        </thead>
+        <tbody id="tbodyContratos"></tbody>
+    </table>
+    <div id="vazioContratos" style="display:none; text-align:center; color:var(--secondary); padding:30px;">Nenhum contrato salvo ainda.</div>
+</div>
+</section>
+
+<div id="area-impressao-consig"></div>
+
+<script>
+    function escapeAttrCG(s) {
+        return String(s ?? '').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
+    }
+    function fmtDataCG(iso) {
+        if (!iso) return '_____________';
+        const [a,m,d] = iso.split('-');
+        return `${d}/${m}/${a}`;
+    }
+    function fmtMoedaCG(v) {
+        return 'R$ ' + (parseFloat(v) || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2});
+    }
+
+    // ---------- Persistência ----------
+    const CHAVE_CONTADOR_CG = 'contConsignacao_Alma';
+    const CHAVE_CONTRATOS = 'contratosConsignacao_Alma';
+    const CHAVE_EMPRESA_CG = 'consignatarioPadrao_Alma';
+    const CHAVE_CLIENTES_OS = 'clientesOS_Alma';
+    const CHAVE_MAQUINAS = 'maquinasOS_Alma';
+
+    let contratos = [];
+    let contratoEditandoId = null;
+    let clientesOS = [];
+    let maquinas = [];
+
+    function obterContadorContrato() {
+        const bruto = localStorage.getItem(CHAVE_CONTADOR_CG);
+        const n = parseInt(bruto, 10);
+        return (!bruto || isNaN(n) || n < 1) ? 1 : n;
+    }
+
+    function carregarContratos() {
+        try {
+            const bruto = localStorage.getItem(CHAVE_CONTRATOS);
+            contratos = bruto ? JSON.parse(bruto) : [];
+        } catch (e) { contratos = []; }
+    }
+    function salvarContratosLocal() {
+        try { localStorage.setItem(CHAVE_CONTRATOS, JSON.stringify(contratos)); } catch (e) {}
+    }
+
+    function carregarClientesParaSelect() {
+        try {
+            const bruto = localStorage.getItem(CHAVE_CLIENTES_OS);
+            const dados = bruto ? JSON.parse(bruto) : null;
+            clientesOS = dados && Array.isArray(dados.clientes) ? dados.clientes : [];
+        } catch (e) { clientesOS = []; }
+        const sel = document.getElementById('cgClienteSelect');
+        const ordenados = clientesOS.slice().sort((a,b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+        sel.innerHTML = '<option value="">— Selecionar cliente cadastrado (opcional) —</option>' +
+            ordenados.map(c => `<option value="${c.id}">${escapeAttrCG(c.nome)}</option>`).join('');
+    }
+    function preencherConsignanteSelecionado() {
+        const id = Number(document.getElementById('cgClienteSelect').value);
+        if (!id) return;
+        const c = clientesOS.find(x => x.id === id);
+        if (!c) return;
+        document.getElementById('cgConsignanteNome').value = c.nome || '';
+        document.getElementById('cgConsignanteDoc').value = c.doc || '';
+        document.getElementById('cgConsignanteEndereco').value = [c.endereco, c.complemento, c.cidade].filter(Boolean).join(', ');
+        document.getElementById('cgConsignanteTelefone').value = c.celular || '';
+    }
+
+    function carregarMaquinasParaSelect() {
+        try {
+            const bruto = localStorage.getItem(CHAVE_MAQUINAS);
+            const dados = bruto ? JSON.parse(bruto) : null;
+            maquinas = dados && Array.isArray(dados.maquinas) ? dados.maquinas : [];
+        } catch (e) { maquinas = []; }
+        const sel = document.getElementById('cgMaquinaSelect');
+        sel.innerHTML = '<option value="">— Selecionar máquina cadastrada (opcional) —</option>' +
+            maquinas.map(m => `<option value="${m.id}">${escapeAttrCG(m.tipo)} ${escapeAttrCG(m.marca)} ${escapeAttrCG(m.modelo)}</option>`).join('');
+    }
+    function preencherMaquinaSelecionada() {
+        const id = Number(document.getElementById('cgMaquinaSelect').value);
+        if (!id) return;
+        const m = maquinas.find(x => x.id === id);
+        if (!m) return;
+        document.getElementById('cgTipo').value = m.tipo || '';
+        document.getElementById('cgMarca').value = m.marca || '';
+        document.getElementById('cgModelo').value = m.modelo || '';
+        document.getElementById('cgAno').value = m.ano || '';
+        document.getElementById('cgSerie').value = m.serie || '';
+        document.getElementById('cgHorimetro').value = m.horimetro || '';
+        if (m.valor) document.getElementById('cgValorMinimo').value = m.valor;
+    }
+
+    function carregarConsignatarioPadrao() {
+        try {
+            const bruto = localStorage.getItem(CHAVE_EMPRESA_CG);
+            const dados = bruto ? JSON.parse(bruto) : null;
+            if (dados) {
+                document.getElementById('cgConsignatarioNome').value = dados.nome || '';
+                document.getElementById('cgConsignatarioDoc').value = dados.doc || '';
+                document.getElementById('cgConsignatarioEndereco').value = dados.endereco || '';
+                document.getElementById('cgConsignatarioTelefone').value = dados.telefone || '';
+            }
+        } catch (e) {}
+    }
+    function salvarConsignatarioPadrao() {
+        const dados = {
+            nome: document.getElementById('cgConsignatarioNome').value.trim(),
+            doc: document.getElementById('cgConsignatarioDoc').value.trim(),
+            endereco: document.getElementById('cgConsignatarioEndereco').value.trim(),
+            telefone: document.getElementById('cgConsignatarioTelefone').value.trim(),
+        };
+        try { localStorage.setItem(CHAVE_EMPRESA_CG, JSON.stringify(dados)); } catch (e) {}
+    }
+    ['cgConsignatarioNome','cgConsignatarioDoc','cgConsignatarioEndereco','cgConsignatarioTelefone'].forEach(id => {
+        document.getElementById(id).addEventListener('change', salvarConsignatarioPadrao);
+    });
+
+    // ---------- Datas (fim calculado automaticamente) ----------
+    function recalcularDataFim() {
+        const inicio = document.getElementById('cgDataInicio').value;
+        const dias = parseInt(document.getElementById('cgPrazoDias').value, 10) || 0;
+        if (!inicio) { document.getElementById('cgDataFim').value = ''; return; }
+        const d = new Date(inicio + 'T00:00:00');
+        d.setDate(d.getDate() + dias);
+        document.getElementById('cgDataFim').value = d.toISOString().slice(0,10);
+    }
+    document.getElementById('cgDataInicio').addEventListener('change', recalcularDataFim);
+    document.getElementById('cgPrazoDias').addEventListener('input', recalcularDataFim);
+
+    // ---------- Coletar / preencher formulário ----------
+    function coletarFormularioCG() {
+        return {
+            clienteId: document.getElementById('cgClienteSelect').value ? Number(document.getElementById('cgClienteSelect').value) : null,
+            consignanteNome: document.getElementById('cgConsignanteNome').value.trim(),
+            consignanteDoc: document.getElementById('cgConsignanteDoc').value.trim(),
+            consignanteRg: document.getElementById('cgConsignanteRg').value.trim(),
+            consignanteEndereco: document.getElementById('cgConsignanteEndereco').value.trim(),
+            consignanteTelefone: document.getElementById('cgConsignanteTelefone').value.trim(),
+            consignatarioNome: document.getElementById('cgConsignatarioNome').value.trim(),
+            consignatarioDoc: document.getElementById('cgConsignatarioDoc').value.trim(),
+            consignatarioEndereco: document.getElementById('cgConsignatarioEndereco').value.trim(),
+            consignatarioTelefone: document.getElementById('cgConsignatarioTelefone').value.trim(),
+            maquinaId: document.getElementById('cgMaquinaSelect').value ? Number(document.getElementById('cgMaquinaSelect').value) : null,
+            tipo: document.getElementById('cgTipo').value.trim(),
+            marca: document.getElementById('cgMarca').value.trim(),
+            modelo: document.getElementById('cgModelo').value.trim(),
+            ano: document.getElementById('cgAno').value.trim(),
+            serie: document.getElementById('cgSerie').value.trim(),
+            horimetro: document.getElementById('cgHorimetro').value.trim(),
+            estado: document.getElementById('cgEstado').value.trim(),
+            acessorios: document.getElementById('cgAcessorios').value.trim(),
+            valorMinimo: parseFloat(document.getElementById('cgValorMinimo').value) || 0,
+            comissao: parseFloat(document.getElementById('cgComissao').value) || 0,
+            prazoRepasse: parseInt(document.getElementById('cgPrazoRepasse').value, 10) || 0,
+            dataInicio: document.getElementById('cgDataInicio').value,
+            prazoDias: parseInt(document.getElementById('cgPrazoDias').value, 10) || 0,
+            dataFim: document.getElementById('cgDataFim').value,
+            cidadeForo: document.getElementById('cgCidadeForo').value.trim(),
+            dataContrato: document.getElementById('cgDataContrato').value,
+            observacoes: document.getElementById('cgObservacoes').value.trim(),
+        };
+    }
+
+    function preencherFormularioCG(c) {
+        document.getElementById('cgClienteSelect').value = c.clienteId || '';
+        document.getElementById('cgConsignanteNome').value = c.consignanteNome || '';
+        document.getElementById('cgConsignanteDoc').value = c.consignanteDoc || '';
+        document.getElementById('cgConsignanteRg').value = c.consignanteRg || '';
+        document.getElementById('cgConsignanteEndereco').value = c.consignanteEndereco || '';
+        document.getElementById('cgConsignanteTelefone').value = c.consignanteTelefone || '';
+        document.getElementById('cgConsignatarioNome').value = c.consignatarioNome || '';
+        document.getElementById('cgConsignatarioDoc').value = c.consignatarioDoc || '';
+        document.getElementById('cgConsignatarioEndereco').value = c.consignatarioEndereco || '';
+        document.getElementById('cgConsignatarioTelefone').value = c.consignatarioTelefone || '';
+        document.getElementById('cgMaquinaSelect').value = c.maquinaId || '';
+        document.getElementById('cgTipo').value = c.tipo || '';
+        document.getElementById('cgMarca').value = c.marca || '';
+        document.getElementById('cgModelo').value = c.modelo || '';
+        document.getElementById('cgAno').value = c.ano || '';
+        document.getElementById('cgSerie').value = c.serie || '';
+        document.getElementById('cgHorimetro').value = c.horimetro || '';
+        document.getElementById('cgEstado').value = c.estado || '';
+        document.getElementById('cgAcessorios').value = c.acessorios || '';
+        document.getElementById('cgValorMinimo').value = c.valorMinimo || 0;
+        document.getElementById('cgComissao').value = c.comissao || 0;
+        document.getElementById('cgPrazoRepasse').value = c.prazoRepasse || 0;
+        document.getElementById('cgDataInicio').value = c.dataInicio || '';
+        document.getElementById('cgPrazoDias').value = c.prazoDias || 90;
+        document.getElementById('cgDataFim').value = c.dataFim || '';
+        document.getElementById('cgCidadeForo').value = c.cidadeForo || '';
+        document.getElementById('cgDataContrato').value = c.dataContrato || '';
+        document.getElementById('cgObservacoes').value = c.observacoes || '';
+        document.getElementById('numeroContrato').textContent = c.numero ? c.numero : '—';
+    }
+
+    // ---------- Ações principais ----------
+    function novoContrato() {
+        contratoEditandoId = null;
+        const consignatario = coletarFormularioCG();
+        preencherFormularioCG({
+            consignatarioNome: consignatario.consignatarioNome,
+            consignatarioDoc: consignatario.consignatarioDoc,
+            consignatarioEndereco: consignatario.consignatarioEndereco,
+            consignatarioTelefone: consignatario.consignatarioTelefone,
+            prazoDias: 90, comissao: 10, prazoRepasse: 5,
+        });
+        document.getElementById('cgDataContrato').valueAsDate = new Date();
+        document.getElementById('cgDataInicio').valueAsDate = new Date();
+        recalcularDataFim();
+    }
+
+    function salvarContrato() {
+        const dados = coletarFormularioCG();
+        if (!dados.consignanteNome) { alert('Preencha ao menos o nome do consignante.'); return; }
+        if (!dados.marca && !dados.modelo) { alert('Preencha ao menos marca ou modelo da máquina.'); return; }
+        let c;
+        if (contratoEditandoId) {
+            c = contratos.find(x => x.id === contratoEditandoId);
+        }
+        if (!c) {
+            c = { id: Date.now(), numero: null };
+            contratos.push(c);
+            contratoEditandoId = c.id;
+        }
+        Object.assign(c, dados);
+        if (!c.numero) {
+            const atual = obterContadorContrato();
+            c.numero = 'CONS-' + String(atual).padStart(4, '0');
+            localStorage.setItem(CHAVE_CONTADOR_CG, String(atual + 1));
+        }
+        salvarConsignatarioPadrao();
+        salvarContratosLocal();
+        document.getElementById('numeroContrato').textContent = c.numero;
+        renderContratos();
+        alert('Contrato salvo com sucesso — Nº ' + c.numero + '.');
+    }
+
+    function editarContrato(id) {
+        const c = contratos.find(x => x.id === id);
+        if (!c) return;
+        contratoEditandoId = id;
+        preencherFormularioCG(c);
+        irParaPaginaConsig('novo');
+    }
+
+    function excluirContrato(id) {
+        if (!confirm('Excluir este contrato salvo? Essa ação não pode ser desfeita.')) return;
+        contratos = contratos.filter(x => x.id !== id);
+        if (contratoEditandoId === id) contratoEditandoId = null;
+        salvarContratosLocal();
+        renderContratos();
+    }
+
+    function imprimirContrato() {
+        salvarContrato();
+        const dados = contratos.find(x => x.id === contratoEditandoId);
+        montarDocumentoImpressao(dados);
+        irParaPaginaConsig('novo');
+        setTimeout(() => window.print(), 50);
+    }
+    function imprimirContratoDaLista(id) {
+        editarContrato(id);
+        montarDocumentoImpressao(contratos.find(x => x.id === id));
+        setTimeout(() => window.print(), 50);
+    }
+
+    function montarDocumentoImpressao(c) {
+        if (!c) return;
+        const valorPorExtenso = fmtMoedaCG(c.valorMinimo);
+        const html = `
+            <div class="contrato-titulo">Contrato de Consignação de Máquina Agrícola Nº ${escapeAttrCG(c.numero || '')}</div>
+
+            <div class="contrato-clausula">Pelo presente instrumento particular, de um lado <b>${escapeAttrCG(c.consignanteNome)}</b>${c.consignanteDoc ? ', inscrito(a) no CPF/CNPJ sob o nº ' + escapeAttrCG(c.consignanteDoc) : ''}${c.consignanteRg ? ', portador(a) do RG nº ' + escapeAttrCG(c.consignanteRg) : ''}, com endereço em ${escapeAttrCG(c.consignanteEndereco) || '_____________'}, telefone ${escapeAttrCG(c.consignanteTelefone) || '_____________'}, doravante denominado(a) simplesmente <b>CONSIGNANTE</b>; e de outro lado <b>${escapeAttrCG(c.consignatarioNome) || '_____________'}</b>, inscrito no CPF/CNPJ sob o nº ${escapeAttrCG(c.consignatarioDoc) || '_____________'}, com endereço em ${escapeAttrCG(c.consignatarioEndereco) || '_____________'}, telefone ${escapeAttrCG(c.consignatarioTelefone) || '_____________'}, doravante denominado simplesmente <b>CONSIGNATÁRIO</b>; têm entre si justo e contratado o presente Contrato de Consignação de Máquina Agrícola, mediante as cláusulas seguintes:</div>
+
+            <div class="contrato-clausula"><b>CLÁUSULA 1ª — DO OBJETO.</b> O CONSIGNANTE entrega ao CONSIGNATÁRIO, em regime de consignação, para fins exclusivos de venda, a máquina agrícola a seguir descrita: Tipo: ${escapeAttrCG(c.tipo) || '—'}; Marca: ${escapeAttrCG(c.marca) || '—'}; Modelo: ${escapeAttrCG(c.modelo) || '—'}; Ano: ${escapeAttrCG(c.ano) || '—'}; Nº de Série/Chassi: ${escapeAttrCG(c.serie) || '—'}; Horímetro: ${escapeAttrCG(c.horimetro) || '—'} horas. Estado de conservação: ${escapeAttrCG(c.estado) || 'não especificado'}. Acessórios/implementos inclusos: ${escapeAttrCG(c.acessorios) || 'nenhum'}.</div>
+
+            <div class="contrato-clausula"><b>CLÁUSULA 2ª — DO VALOR E DA COMISSÃO.</b> O valor mínimo de venda estabelecido pelo CONSIGNANTE é de ${valorPorExtenso}, não podendo o CONSIGNATÁRIO efetuar a venda por valor inferior sem autorização expressa e por escrito do CONSIGNANTE. Pela intermediação da venda, o CONSIGNATÁRIO fará jus a uma comissão de ${c.comissao}% (${c.comissao} por cento) sobre o valor efetivamente recebido na venda.</div>
+
+            <div class="contrato-clausula"><b>CLÁUSULA 3ª — DO PRAZO.</b> O presente contrato vigorará pelo prazo de ${c.prazoDias} dias, com início em ${fmtDataCG(c.dataInicio)} e término em ${fmtDataCG(c.dataFim)}, podendo ser renovado mediante acordo expresso entre as partes. Findo o prazo sem a venda da máquina, esta deverá ser devolvida ao CONSIGNANTE, salvo prorrogação acordada.</div>
+
+            <div class="contrato-clausula"><b>CLÁUSULA 4ª — DO REPASSE.</b> Efetivada a venda, o CONSIGNATÁRIO repassará ao CONSIGNANTE o valor correspondente, descontada a comissão prevista na Cláusula 2ª, no prazo de ${c.prazoRepasse} dias contados da data de recebimento do pagamento pelo comprador.</div>
+
+            <div class="contrato-clausula"><b>CLÁUSULA 5ª — DA GUARDA E CONSERVAÇÃO.</b> O CONSIGNATÁRIO se compromete a guardar e conservar a máquina em local apropriado, zelando por sua integridade, respondendo por danos causados por sua negligência, imprudência ou imperícia. Despesas de manutenção necessárias à exposição e venda serão tratadas conforme item de Observações abaixo.</div>
+
+            <div class="contrato-clausula"><b>CLÁUSULA 6ª — DA RETIRADA ANTECIPADA.</b> O CONSIGNANTE poderá, a qualquer tempo, solicitar a devolução da máquina, mediante aviso prévio de 48 (quarenta e oito) horas ao CONSIGNATÁRIO.</div>
+
+            <div class="contrato-clausula"><b>CLÁUSULA 7ª — DISPOSIÇÕES GERAIS.</b> ${escapeAttrCG(c.observacoes) || 'Não há disposições adicionais além das previstas neste instrumento.'}</div>
+
+            <div class="contrato-clausula"><b>CLÁUSULA 8ª — DO FORO.</b> Fica eleito o foro da Comarca de ${escapeAttrCG(c.cidadeForo) || '_____________'} para dirimir quaisquer dúvidas oriundas deste contrato, com renúncia a qualquer outro, por mais privilegiado que seja.</div>
+
+            <div class="contrato-clausula">E por estarem assim justos e contratados, firmam o presente instrumento em 2 (duas) vias de igual teor e forma, na presença das testemunhas abaixo.</div>
+
+            <div class="contrato-clausula" style="margin-top:24px;">${escapeAttrCG(c.cidadeForo) || '_____________'}, ${fmtDataCG(c.dataContrato)}.</div>
+
+            <div class="contrato-assinaturas">
+                <div class="contrato-assinatura-box">
+                    <div class="contrato-linha-assinatura">&nbsp;</div>
+                    CONSIGNANTE<br>${escapeAttrCG(c.consignanteNome)}
+                </div>
+                <div class="contrato-assinatura-box">
+                    <div class="contrato-linha-assinatura">&nbsp;</div>
+                    CONSIGNATÁRIO<br>${escapeAttrCG(c.consignatarioNome)}
+                </div>
+            </div>
+
+            <div class="contrato-testemunhas">
+                <div>
+                    <div class="contrato-linha-assinatura">&nbsp;</div>
+                    Testemunha 1 — Nome:<br>CPF:
+                </div>
+                <div>
+                    <div class="contrato-linha-assinatura">&nbsp;</div>
+                    Testemunha 2 — Nome:<br>CPF:
+                </div>
+            </div>
+        `;
+        document.getElementById('area-impressao-consig').innerHTML = html;
+    }
+
+    // ---------- Lista de contratos ----------
+    function renderContratos() {
+        const tbody = document.getElementById('tbodyContratos');
+        const vazio = document.getElementById('vazioContratos');
+        if (!contratos.length) { tbody.innerHTML = ''; vazio.style.display = 'block'; return; }
+        vazio.style.display = 'none';
+        const ordenados = contratos.slice().sort((a,b) => (b.dataContrato || '').localeCompare(a.dataContrato || ''));
+        tbody.innerHTML = ordenados.map(c => `
+            <tr>
+                <td>${escapeAttrCG(c.numero) || '—'}</td>
+                <td>${escapeAttrCG(c.consignanteNome) || '—'}</td>
+                <td>${escapeAttrCG(c.marca)} ${escapeAttrCG(c.modelo)}</td>
+                <td>${fmtDataCG(c.dataInicio)}</td>
+                <td>${fmtDataCG(c.dataFim)}</td>
+                <td style="white-space:nowrap;">
+                    <button class="btn-acao-resumo" onclick="editarContrato(${c.id})" title="Editar">✏️</button>
+                    <button class="btn-acao-resumo" onclick="imprimirContratoDaLista(${c.id})" title="Imprimir">🖨️</button>
+                    <button class="btn-remove" onclick="excluirContrato(${c.id})" title="Excluir">×</button>
+                </td>
+            </tr>
+        `).join('');
+    }
+
+    // ---------- Navegação por abas ----------
+    function irParaPaginaConsig(nome) {
+        document.querySelectorAll('.pagina-os').forEach(sec => sec.classList.toggle('ativa', sec.dataset.pagina === nome));
+        document.querySelectorAll('.tab-btn-os').forEach(btn => btn.classList.toggle('ativa', btn.dataset.pagina === nome));
+    }
+    document.getElementById('tabs-nav-consig').addEventListener('click', e => {
+        const btn = e.target.closest('.tab-btn-os');
+        if (btn) irParaPaginaConsig(btn.dataset.pagina);
+    });
+
+    // ---------- Inicialização ----------
+    carregarContratos();
+    renderContratos();
+    carregarClientesParaSelect();
+    carregarMaquinasParaSelect();
+    carregarConsignatarioPadrao();
+    document.getElementById('cgDataContrato').valueAsDate = new Date();
+    document.getElementById('cgDataInicio').valueAsDate = new Date();
+    recalcularDataFim();
+</script>
+</body>
+</html>

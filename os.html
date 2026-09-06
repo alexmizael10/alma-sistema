@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OS - ALMA TRATORES</title>
+    <style>
+        :root { --primary: #1e293b; --secondary: #64748b; --accent: #1e40af; --bg: #ffffff; }
+        
+        body { 
+            font-family: 'Segoe UI', Arial, sans-serif; 
+            background-color: #f8fafc; 
+            padding: 20px; 
+            color: #334155; 
+            margin: 0;
+        }
+
+        .container { 
+            max-width: 900px; 
+            background: white; 
+            padding: 50px; 
+            border-radius: 4px; 
+            box-shadow: 0 0 20px rgba(0,0,0,0.05); 
+            margin: auto; 
+            min-height: 29.7cm;
+        }
+        
+        .header-section { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px solid #e2e8f0; padding-bottom: 20px; margin-bottom: 30px; }
+        
+        .company-info { width: 60%; }
+        .logo-box { width: 250px; margin-bottom: 15px; display: flex; align-items: center; justify-content: flex-start; }
+        .logo-box img { max-width: 100%; max-height: 100px; object-fit: contain; }
+        
+        .details-empresa { font-size: 0.75rem; line-height: 1.4; color: #475569; }
+        .details-empresa strong { color: var(--primary); display: block; font-size: 0.9rem; margin-bottom: 2px; }
+
+        .title-area { text-align: right; width: 40%; }
+        h1 { color: var(--primary); margin: 0; font-size: 1.8rem; letter-spacing: -1px; }
+        .os-number { font-size: 1.4rem; color: #ef4444; font-weight: bold; margin: 5px 0; }
+        .os-number.rascunho { color: var(--secondary); font-size: 1.05rem; letter-spacing: 0.04em; }
+        .data-os { font-size: 0.8rem; font-weight: bold; color: var(--secondary); text-transform: uppercase; }
+
+        .autorizado-label {
+            display: flex; align-items: center; justify-content: flex-end; gap: 6px;
+            font-size: 0.72rem; color: var(--secondary); font-weight: 700;
+            text-transform: uppercase; margin-top: 8px; cursor: pointer;
+        }
+        .autorizado-label input { width: auto; margin: 0; cursor: pointer; }
+
+        h3 { font-size: 0.85rem; color: var(--accent); text-transform: uppercase; margin-bottom: 10px; border-bottom: 1px solid #f1f5f9; padding-bottom: 5px; margin-top: 30px; }
+        
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 15px; }
+        .field-group { display: flex; flex-direction: column; }
+        label { font-size: 0.7rem; font-weight: 700; color: var(--secondary); text-transform: uppercase; margin-bottom: 4px; }
+        
+        input, textarea, select { border: 1px solid #e2e8f0; padding: 8px; font-size: 0.9rem; color: #1e293b; border-radius: 2px; width: 100%; box-sizing: border-box; font-family: inherit; }
+
+        table { width: 100%; border-collapse: collapse; margin-top: 5px; table-layout: fixed; }
+        th { background: #f8fafc; text-align: left; padding: 10px; font-size: 0.7rem; color: #475569; border: 1px solid #e2e8f0; }
+        td { border: 1px solid #e2e8f0; padding: 0; }
+        td input, td select { border: none; width: 100%; height: 100%; padding: 10px; background: transparent; }
+        
+        .no-print-btn { background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; padding: 5px 12px; border-radius: 4px; cursor: pointer; font-size: 0.75rem; margin-top: 10px; }
+        .btn-imprimir { background: var(--accent); color: white; padding: 15px; border: none; border-radius: 4px; width: 100%; font-weight: bold; margin-top: 40px; cursor: pointer; font-size: 1rem; }
+
+        .footer-area { margin-top: 30px; display: grid; grid-template-columns: 1fr 280px; gap: 40px; }
+        .total-container { background: #1e293b; color: white; padding: 20px; border-radius: 4px; text-align: right; }
+        .total-value { font-size: 1.8rem; font-weight: bold; }
+
+        .assinaturas { display: grid; grid-template-columns: 1fr 1fr; gap: 50px; margin-top: 80px; }
+        .assinatura-box { border-top: 1px solid #334155; text-align: center; padding-top: 10px; font-size: 0.75rem; font-weight: bold; text-transform: uppercase; }
+
+        .btn-remove { color: #f87171; background: none; border: none; cursor: pointer; font-size: 1.2rem; }
+
+        .voltar-menu {
+            display: inline-flex; align-items: center; gap: 6px;
+            max-width: 900px; margin: 0 auto 12px; padding: 0 4px;
+            font-size: 0.8rem; color: var(--secondary); text-decoration: none;
+        }
+        .voltar-menu:hover { color: var(--accent); }
+
+        /* ---------- Tema (fundo + abas) ---------- */
+        body {
+            background-color: #EEF1F6;
+            background-image:
+                linear-gradient(rgba(30,64,175,0.055) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(30,64,175,0.055) 1px, transparent 1px);
+            background-size: 28px 28px;
+        }
+        .tabs-nav-os {
+            max-width: 900px; margin: 0 auto 16px; display: flex; gap: 4px;
+            border-bottom: 1px solid #cbd5e1;
+        }
+        .tab-btn-os {
+            border: none; background: transparent; font-family: 'Segoe UI', Arial, sans-serif;
+            font-size: 0.85rem; font-weight: 700; color: var(--secondary);
+            padding: 10px 16px; cursor: pointer; border-bottom: 3px solid transparent; margin-bottom: -1px;
+        }
+        .tab-btn-os:hover { color: var(--primary); }
+        .tab-btn-os.ativa { color: var(--accent); border-bottom-color: var(--accent); }
+        .pagina-os { display: none; }
+        .pagina-os.ativa { display: block; }
+        .acoes-os { display: flex; gap: 10px; margin-top: 40px; }
+        .btn-secundario-os {
+            background: #f1f5f9; color: var(--primary); border: 1px solid #e2e8f0;
+            padding: 15px 20px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 0.9rem;
+        }
+        .btn-secundario-os:hover { background: #e2e8f0; }
+        .acoes-os .btn-imprimir { margin-top: 0; flex: 1; }
+        .resumo-container { min-height: auto !important; }
+        .resumo-container table th { text-transform: uppercase; }
+        .btn-acao-resumo { color: var(--accent); background: none; border: none; cursor: pointer; font-size: 1rem; }
+
+        @media print {
+            .no-print-btn, .btn-imprimir, .btn-remove, .voltar-menu, .autorizado-label, .tabs-nav-os, .acoes-os { display: none !important; }
+            .pagina-os { display: none !important; }
+            .pagina-os[data-pagina="nova"] { display: block !important; }
+            body { background: white; background-image: none; padding: 0; }
+            .container { box-shadow: none; border: none; padding: 0; max-width: 100%; }
+            .total-container { background: #1e293b !important; color: white !important; -webkit-print-color-adjust: exact; }
+        }
+    </style>
+</head>
+<body>
+
+<a href="tratores.html" class="voltar-menu">← Menu ALMA TRATORES</a>
+
+<nav class="tabs-nav-os" id="tabs-nav-os">
+    <button class="tab-btn-os ativa" data-pagina="nova">📝 Nova OS</button>
+    <button class="tab-btn-os" data-pagina="clientes">👤 Clientes</button>
+    <button class="tab-btn-os" data-pagina="resumo">📋 Ordens de Serviço</button>
+</nav>
+
+<section class="pagina-os ativa" data-pagina="nova">
+<div class="container">
+    <div class="header-section">
+        <div class="company-info">
+            <div class="logo-box">
+                <img src="data:image/png;base64,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" alt="ALMA TRATORES">
+            </div>
+            <div class="details-empresa">
+                <strong>ALMA TRATORES LTDA.</strong>
+                CNPJ: 40.976.380/0001-19<br>
+                Rua Ana Maura Rocha, SN, Qd. 01, Lts. 02/03/04, Vila Mariana<br>
+                Rio Verde - GO, CEP: 75.906-600<br>
+                Telefone: (64) 99987-1001
+            </div>
+        </div>
+        
+        <div class="title-area">
+            <h1>ORDEM DE SERVIÇO</h1>
+            <div class="os-number rascunho" id="osNumeroLinha">Nº <span id="numeroOS">RASCUNHO</span></div>
+            <div class="data-os">EMISSÃO: <input type="date" id="dataEmissao" style="width: 140px; border:none; background:transparent; font-weight: bold; text-align: right;"></div>
+            <label class="autorizado-label no-print-btn-inline">
+                <input type="checkbox" id="autorizadoOS">
+                Serviço autorizado (gera número oficial)
+            </label>
+        </div>
+    </div>
+
+    <h3>Dados do Cliente</h3>
+    <div class="grid no-print-btn">
+        <div class="field-group" style="grid-column: span 3;">
+            <label>Cliente cadastrado</label>
+            <select id="osClienteSelect" onchange="preencherClienteSelecionado()">
+                <option value="">— Selecionar cliente cadastrado (opcional) —</option>
+            </select>
+        </div>
+    </div>
+    <div class="grid">
+        <div class="field-group" style="grid-column: span 2;"><label>Nome / Razão Social</label><input type="text" id="osClienteNome"></div>
+        <div class="field-group"><label>CPF / CNPJ</label><input type="text" id="osClienteDoc"></div>
+        <div class="field-group"><label>Telefone / Contato</label><input type="text" id="osClienteContato"></div>
+    </div>
+
+    <h3>Descrição do Equipamento / Problema</h3>
+    <textarea rows="3" id="osDescricao"></textarea>
+
+    <h3>📦 Detalhamento de Peças/Materiais</h3>
+    <table id="pecasTab">
+        <thead>
+            <tr><th style="width: 50%;">Descrição</th><th>Qtd</th><th>Unit. (R$)</th><th>Total (R$)</th><th class="no-print-btn" style="width: 40px;"></th></tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><input type="text"></td>
+                <td><input type="number" class="p-qtd" value="0" oninput="calc()"></td>
+                <td><input type="number" step="0.01" class="p-unit" value="0.00" oninput="calc()"></td>
+                <td><input type="text" class="p-sub" value="R$ 0,00" readonly></td>
+                <td class="no-print-btn"><button class="btn-remove" onclick="this.parentElement.parentElement.remove(); calc();">×</button></td>
+            </tr>
+        </tbody>
+    </table>
+    <button class="no-print-btn" onclick="addPeca()">+ Nova Peça/Material</button>
+
+    <h3>🔧 Mão de Obra e Serviços</h3>
+    <table id="servicosTab">
+        <thead>
+            <tr><th style="width: 50%;">Descrição</th><th style="width: 25%;">Tipo</th><th>Valor (R$)</th><th class="no-print-btn" style="width: 40px;"></th></tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><input type="text"></td>
+                <td><select><option>M.O. Direta</option><option>M.O. Indireta</option></select></td>
+                <td><input type="number" step="0.01" class="s-val" value="0.00" oninput="calc()"></td>
+                <td class="no-print-btn"><button class="btn-remove" onclick="this.parentElement.parentElement.remove(); calc();">×</button></td>
+            </tr>
+        </tbody>
+    </table>
+    <button class="no-print-btn" onclick="addServ()">+ Novo Serviço</button>
+
+    <div class="footer-area">
+        <div class="prazos">
+            <h3>Informações Adicionais</h3>
+            <div class="grid">
+                <div class="field-group"><label>Previsão Entrega</label><input type="date" id="osPrevisao"></div>
+                <div class="field-group"><label>Garantia</label><input type="text" id="osGarantia" placeholder="90 dias"></div>
+                <div class="field-group"><label>Valor já pago (R$)</label><input type="number" min="0" step="0.01" id="osValorPago" value="0" oninput="calc()"></div>
+                <div class="field-group"><label>Data limite p/ pagamento</label><input type="date" id="osVencimento" oninput="calc()"></div>
+            </div>
+        </div>
+        <div class="total-container">
+            <span style="font-size: 0.7rem; text-transform: uppercase; opacity: 0.8;">Total Geral</span>
+            <div class="total-value" id="totalGeral">R$ 0,00</div>
+            <div style="margin-top: 10px; font-size: 0.75rem; opacity: 0.9; line-height: 1.6;">
+                Pago: <b id="totalPagoTxt">R$ 0,00</b><br>
+                A pagar: <b id="totalAPagarTxt">R$ 0,00</b>
+            </div>
+            <div id="avisoAtrasadoOS" class="no-print-btn" style="display:none; margin-top: 10px; background: #ef4444; color: #fff; padding: 6px 10px; border-radius: 4px; font-size: 0.75rem; font-weight: bold; text-align: center;">⚠ PAGAMENTO ATRASADO</div>
+        </div>
+    </div>
+
+    <div class="assinaturas">
+        <div class="assinatura-box">Responsável: ALMA TRATORES</div>
+        <div class="assinatura-box">Aceite do Cliente</div>
+    </div>
+
+    <div class="acoes-os no-print-btn">
+        <button type="button" class="btn-secundario-os" onclick="novaOS()">🆕 Nova OS</button>
+        <button type="button" class="btn-secundario-os" onclick="salvarOS()">💾 Salvar</button>
+        <button type="button" class="btn-imprimir" onclick="imprimirOS()">🖨️ Imprimir</button>
+    </div>
+</div>
+</section>
+
+<section class="pagina-os" data-pagina="resumo">
+<div class="container resumo-container">
+    <h1 style="margin-bottom: 20px;">Ordens de Serviço</h1>
+
+    <div id="avisoGeralAtrasoOS" style="display:none; background:#fee2e2; color:#991b1b; padding:12px 16px; border-radius:4px; font-size:0.85rem; font-weight:700; margin-bottom:18px;">⚠ Existem ordens de serviço com pagamento atrasado.</div>
+
+    <h3 style="margin-top:0;">Distribuição financeira</h3>
+    <div id="grafico-financeiro-os" style="display:flex; align-items:center; gap:28px; flex-wrap:wrap; margin-bottom:30px;"></div>
+
+    <table>
+        <thead>
+            <tr><th>Nº</th><th>Cliente</th><th>Data</th><th>Total</th><th>Pago</th><th>A pagar</th><th>Pagamento</th><th>Emissão</th><th style="width:100px;"></th></tr>
+        </thead>
+        <tbody id="tbodyOrdens"></tbody>
+    </table>
+    <div id="vazioOrdens" style="display:none; text-align:center; color:var(--secondary); padding:30px;">Nenhuma OS salva ainda.</div>
+</div>
+</section>
+
+<section class="pagina-os" data-pagina="clientes">
+<div class="container resumo-container">
+    <h1 style="margin-bottom: 20px;">Clientes</h1>
+
+    <div class="grid">
+        <div class="field-group" style="grid-column: span 2;"><label>Nome do Cliente</label><input type="text" id="clNome"></div>
+        <div class="field-group"><label>CEP</label><input type="text" id="clCep" maxlength="9" placeholder="75906-600" oninput="mascaraCepOS()" onblur="buscarCepOS()"></div>
+        <div class="field-group"><label>CPF / CNPJ</label><input type="text" id="clDoc"></div>
+        <div class="field-group"><label>Celular</label><input type="text" id="clCelular"></div>
+        <div class="field-group"><label>E-mail</label><input type="email" id="clEmail"></div>
+        <div class="field-group" style="grid-column: span 2;">
+            <label>Endereço <span id="clEnderecoStatus" style="font-weight:400; text-transform:none; color:var(--secondary);"></span></label>
+            <input type="text" id="clEndereco" placeholder="Preenchido automaticamente pelo CEP, ou digite manualmente">
+        </div>
+        <div class="field-group"><label>Complemento</label><input type="text" id="clComplemento" placeholder="Número, sala, referência"></div>
+        <div class="field-group" style="grid-column: span 2;"><label>Cidade / UF</label><input type="text" id="clCidade"></div>
+    </div>
+    <div class="acoes-os no-print-btn">
+        <button type="button" class="btn-secundario-os" id="btnCancelarEdicaoClienteOS" style="display:none;" onclick="cancelarEdicaoClienteOS()">Cancelar edição</button>
+        <button type="button" class="btn-imprimir" style="flex:0 0 auto;" id="btnSalvarClienteOS" onclick="salvarClienteOS()">💾 Cadastrar cliente</button>
+    </div>
+
+    <table style="margin-top:34px;">
+        <thead>
+            <tr><th>Nome</th><th>CPF/CNPJ</th><th>Contato</th><th>Cidade/UF</th><th style="width:80px;"></th></tr>
+        </thead>
+        <tbody id="tbodyClientesOS"></tbody>
+    </table>
+    <div id="vazioClientesOS" style="display:none; text-align:center; color:var(--secondary); padding:30px;">Nenhum cliente cadastrado ainda.</div>
+</div>
+</section>
+
+<script>
+    // ---------- Numeração oficial: só é atribuída (e o contador só avança) quando o serviço
+    // é marcado como autorizado, no momento de SALVAR. Sem autorização, fica como RASCUNHO. ----------
+    const CHAVE_CONTADOR = 'contOS_Alma';
+    const CHAVE_ORDENS = 'ordensOS_Alma';
+
+    let ordens = [];
+    let osEditandoId = null;
+
+    function obterContadorAtual() {
+        const bruto = localStorage.getItem(CHAVE_CONTADOR);
+        const numero = parseInt(bruto, 10);
+        return (!bruto || isNaN(numero) || numero < 1) ? 1 : numero;
+    }
+
+    function carregarOrdens() {
+        try {
+            const bruto = localStorage.getItem(CHAVE_ORDENS);
+            ordens = bruto ? JSON.parse(bruto) : [];
+        } catch (e) { ordens = []; }
+    }
+
+    function salvarOrdensLocal() {
+        try { localStorage.setItem(CHAVE_ORDENS, JSON.stringify(ordens)); } catch (e) {}
+    }
+
+    // ---------- Clientes (cadastro próprio da OS) ----------
+    const CHAVE_CLIENTES_OS = 'clientesOS_Alma';
+    let clientesOS = [];
+    let contadorClienteOS = 1;
+    let clienteEditandoIdOS = null;
+
+    function carregarClientesOS() {
+        try {
+            const bruto = localStorage.getItem(CHAVE_CLIENTES_OS);
+            const dados = bruto ? JSON.parse(bruto) : null;
+            clientesOS = dados && Array.isArray(dados.clientes) ? dados.clientes : [];
+            contadorClienteOS = (dados && dados.contador) || (clientesOS.reduce((m,c) => Math.max(m, c.id || 0), 0) + 1);
+        } catch (e) { clientesOS = []; contadorClienteOS = 1; }
+    }
+    function salvarClientesOSLocal() {
+        try { localStorage.setItem(CHAVE_CLIENTES_OS, JSON.stringify({ clientes: clientesOS, contador: contadorClienteOS })); } catch (e) {}
+    }
+
+    function mascaraCepOS() {
+        const campo = document.getElementById('clCep');
+        const digitos = campo.value.replace(/\D/g, '').slice(0, 8);
+        campo.value = digitos.length > 5 ? digitos.slice(0,5) + '-' + digitos.slice(5) : digitos;
+    }
+
+    async function buscarCepOS() {
+        const digitos = document.getElementById('clCep').value.replace(/\D/g, '');
+        const statusEl = document.getElementById('clEnderecoStatus');
+        if (digitos.length !== 8) { statusEl.textContent = ''; return; }
+        statusEl.textContent = '(buscando endereço…)';
+        try {
+            const resp = await fetch('https://viacep.com.br/ws/' + digitos + '/json/');
+            const data = await resp.json();
+            if (data.erro) { statusEl.textContent = '(CEP não encontrado)'; return; }
+            const endereco = [data.logradouro, data.bairro].filter(Boolean).join(', ');
+            const cidadeUf = [data.localidade, data.uf].filter(Boolean).join(' - ');
+            if (endereco) document.getElementById('clEndereco').value = endereco;
+            if (cidadeUf) document.getElementById('clCidade').value = cidadeUf;
+            statusEl.textContent = endereco ? '(preenchido pelo CEP)' : '(CEP sem logradouro cadastrado — preencha manualmente)';
+        } catch (e) {
+            statusEl.textContent = '(sem internet — preencha manualmente)';
+        }
+    }
+
+    function limparFormClienteOS() {
+        ['clNome','clCep','clDoc','clCelular','clEmail','clEndereco','clComplemento','clCidade'].forEach(id => document.getElementById(id).value = '');
+        document.getElementById('clEnderecoStatus').textContent = '';
+        clienteEditandoIdOS = null;
+        document.getElementById('btnSalvarClienteOS').textContent = '💾 Cadastrar cliente';
+        document.getElementById('btnCancelarEdicaoClienteOS').style.display = 'none';
+    }
+    function cancelarEdicaoClienteOS() { limparFormClienteOS(); }
+
+    function salvarClienteOS() {
+        const nome = document.getElementById('clNome').value.trim();
+        if (!nome) { alert('Preencha ao menos o nome do cliente.'); return; }
+        const dados = {
+            nome,
+            cep: document.getElementById('clCep').value.trim(),
+            doc: document.getElementById('clDoc').value.trim(),
+            celular: document.getElementById('clCelular').value.trim(),
+            email: document.getElementById('clEmail').value.trim(),
+            endereco: document.getElementById('clEndereco').value.trim(),
+            complemento: document.getElementById('clComplemento').value.trim(),
+            cidade: document.getElementById('clCidade').value.trim(),
+        };
+        if (clienteEditandoIdOS) {
+            const c = clientesOS.find(x => x.id === clienteEditandoIdOS);
+            if (c) Object.assign(c, dados);
+        } else {
+            clientesOS.push({ id: contadorClienteOS++, ...dados });
+        }
+        salvarClientesOSLocal();
+        limparFormClienteOS();
+        renderClientesOS();
+        popularSelectClientesOS();
+    }
+
+    function editarClienteOS(id) {
+        const c = clientesOS.find(x => x.id === id);
+        if (!c) return;
+        clienteEditandoIdOS = id;
+        document.getElementById('clNome').value = c.nome || '';
+        document.getElementById('clCep').value = c.cep || '';
+        document.getElementById('clDoc').value = c.doc || '';
+        document.getElementById('clCelular').value = c.celular || '';
+        document.getElementById('clEmail').value = c.email || '';
+        document.getElementById('clEndereco').value = c.endereco || '';
+        document.getElementById('clComplemento').value = c.complemento || '';
+        document.getElementById('clCidade').value = c.cidade || '';
+        document.getElementById('btnSalvarClienteOS').textContent = '💾 Salvar alterações';
+        document.getElementById('btnCancelarEdicaoClienteOS').style.display = 'inline-block';
+    }
+
+    function excluirClienteOS(id) {
+        if (!confirm('Remover este cliente do cadastro?')) return;
+        clientesOS = clientesOS.filter(x => x.id !== id);
+        if (clienteEditandoIdOS === id) limparFormClienteOS();
+        salvarClientesOSLocal();
+        renderClientesOS();
+        popularSelectClientesOS();
+    }
+
+    function renderClientesOS() {
+        const tbody = document.getElementById('tbodyClientesOS');
+        const vazio = document.getElementById('vazioClientesOS');
+        if (!clientesOS.length) { tbody.innerHTML = ''; vazio.style.display = 'block'; return; }
+        vazio.style.display = 'none';
+        const ordenados = clientesOS.slice().sort((a,b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+        tbody.innerHTML = ordenados.map(c => {
+            const contato = [c.celular, c.email].filter(Boolean).join(' · ') || '—';
+            return `
+                <tr>
+                    <td>${escapeAttrOS(c.nome)}</td>
+                    <td>${escapeAttrOS(c.doc) || '—'}</td>
+                    <td>${escapeAttrOS(contato)}</td>
+                    <td>${escapeAttrOS(c.cidade) || '—'}</td>
+                    <td style="white-space:nowrap;">
+                        <button class="btn-acao-resumo" onclick="editarClienteOS(${c.id})" title="Editar">✏️</button>
+                        <button class="btn-remove" onclick="excluirClienteOS(${c.id})" title="Excluir">×</button>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    }
+
+    function popularSelectClientesOS() {
+        const sel = document.getElementById('osClienteSelect');
+        const atual = sel.value;
+        const ordenados = clientesOS.slice().sort((a,b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+        sel.innerHTML = '<option value="">— Selecionar cliente cadastrado (opcional) —</option>' +
+            ordenados.map(c => `<option value="${c.id}">${escapeAttrOS(c.nome)}</option>`).join('');
+        if ([...sel.options].some(o => o.value === atual)) sel.value = atual;
+    }
+
+    function preencherClienteSelecionado() {
+        const id = Number(document.getElementById('osClienteSelect').value);
+        if (!id) return;
+        const c = clientesOS.find(x => x.id === id);
+        if (!c) return;
+        document.getElementById('osClienteNome').value = c.nome || '';
+        document.getElementById('osClienteDoc').value = c.doc || '';
+        document.getElementById('osClienteContato').value = c.celular || c.email || '';
+    }
+
+    function atualizarExibicaoNumero() {
+        const numeroEl = document.getElementById('numeroOS');
+        const linhaEl = document.getElementById('osNumeroLinha');
+        const editando = osEditandoId ? ordens.find(o => o.id === osEditandoId) : null;
+
+        if (editando && editando.numero) {
+            numeroEl.innerText = editando.numero;
+            linhaEl.classList.remove('rascunho');
+            return;
+        }
+        const autorizado = document.getElementById('autorizadoOS').checked;
+        if (autorizado) {
+            numeroEl.innerText = obterContadorAtual().toString().padStart(4, '0');
+            linhaEl.classList.remove('rascunho');
+        } else {
+            numeroEl.innerText = 'RASCUNHO';
+            linhaEl.classList.add('rascunho');
+        }
+    }
+    document.getElementById('autorizadoOS').addEventListener('change', atualizarExibicaoNumero);
+
+    function addPeca() {
+        const row = document.querySelector('#pecasTab tbody').insertRow();
+        row.innerHTML = `<td><input type="text"></td><td><input type="number" class="p-qtd" value="0" oninput="calc()"></td><td><input type="number" step="0.01" class="p-unit" value="0.00" oninput="calc()"></td><td><input type="text" class="p-sub" value="R$ 0,00" readonly></td><td class="no-print-btn"><button class="btn-remove" onclick="this.parentElement.parentElement.remove(); calc();">×</button></td>`;
+    }
+
+    function addServ() {
+        const row = document.querySelector('#servicosTab tbody').insertRow();
+        row.innerHTML = `<td><input type="text"></td><td><select><option>M.O. Direta</option><option>M.O. Indireta</option></select></td><td><input type="number" step="0.01" class="s-val" value="0.00" oninput="calc()"></td><td class="no-print-btn"><button class="btn-remove" onclick="this.parentElement.parentElement.remove(); calc();">×</button></td>`;
+    }
+
+    function calc() {
+        let total = 0;
+        document.querySelectorAll('#pecasTab tbody tr').forEach(r => {
+            const q = parseFloat(r.querySelector('.p-qtd').value) || 0;
+            const u = parseFloat(r.querySelector('.p-unit').value) || 0;
+            const sub = q * u;
+            r.querySelector('.p-sub').value = 'R$ ' + sub.toLocaleString('pt-BR', {minimumFractionDigits: 2});
+            total += sub;
+        });
+        document.querySelectorAll('.s-val').forEach(i => total += parseFloat(i.value || 0));
+        document.getElementById('totalGeral').innerText = 'R$ ' + total.toLocaleString('pt-BR', {minimumFractionDigits: 2});
+
+        const pago = parseFloat(document.getElementById('osValorPago').value) || 0;
+        const aPagar = Math.max(0, total - pago);
+        document.getElementById('totalPagoTxt').innerText = 'R$ ' + pago.toLocaleString('pt-BR', {minimumFractionDigits: 2});
+        document.getElementById('totalAPagarTxt').innerText = 'R$ ' + aPagar.toLocaleString('pt-BR', {minimumFractionDigits: 2});
+
+        const vencimento = document.getElementById('osVencimento').value;
+        const hoje = new Date().toISOString().slice(0, 10);
+        const atrasado = aPagar > 0.009 && vencimento && vencimento < hoje;
+        document.getElementById('avisoAtrasadoOS').style.display = atrasado ? 'block' : 'none';
+    }
+
+    // ---------- Coleta / preenchimento do formulário ----------
+    function escapeAttrOS(s) {
+        return String(s ?? '').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
+    }
+
+    function coletarPecas() {
+        return [...document.querySelectorAll('#pecasTab tbody tr')].map(r => ({
+            desc: r.cells[0].querySelector('input').value,
+            qtd: parseFloat(r.querySelector('.p-qtd').value) || 0,
+            unit: parseFloat(r.querySelector('.p-unit').value) || 0,
+        }));
+    }
+    function coletarServicos() {
+        return [...document.querySelectorAll('#servicosTab tbody tr')].map(r => ({
+            desc: r.cells[0].querySelector('input').value,
+            tipo: r.cells[1].querySelector('select').value,
+            valor: parseFloat(r.querySelector('.s-val').value) || 0,
+        }));
+    }
+    function coletarFormulario() {
+        return {
+            clienteId: document.getElementById('osClienteSelect').value ? Number(document.getElementById('osClienteSelect').value) : null,
+            clienteNome: document.getElementById('osClienteNome').value.trim(),
+            clienteDoc: document.getElementById('osClienteDoc').value.trim(),
+            clienteContato: document.getElementById('osClienteContato').value.trim(),
+            descricao: document.getElementById('osDescricao').value.trim(),
+            dataEmissao: document.getElementById('dataEmissao').value,
+            previsao: document.getElementById('osPrevisao').value,
+            garantia: document.getElementById('osGarantia').value.trim(),
+            autorizado: document.getElementById('autorizadoOS').checked,
+            valorPago: parseFloat(document.getElementById('osValorPago').value) || 0,
+            vencimento: document.getElementById('osVencimento').value || '',
+            pecas: coletarPecas(),
+            servicos: coletarServicos(),
+        };
+    }
+    function calcularTotalOS(dados) {
+        let total = 0;
+        dados.pecas.forEach(p => total += (p.qtd * p.unit));
+        dados.servicos.forEach(s => total += s.valor);
+        return total;
+    }
+    function calcularAPagarOS(os) {
+        const aPagar = calcularTotalOS(os) - (os.valorPago || 0);
+        return aPagar > 0.009 ? Math.round(aPagar * 100) / 100 : 0;
+    }
+    function situacaoPagamentoOS(os) {
+        const aPagar = calcularAPagarOS(os);
+        if (aPagar <= 0) return 'Pago';
+        const hoje = new Date().toISOString().slice(0, 10);
+        if (os.vencimento && os.vencimento < hoje) return 'Atrasado';
+        return 'A receber';
+    }
+
+    function preencherPecas(pecas) {
+        const tbody = document.querySelector('#pecasTab tbody');
+        tbody.innerHTML = '';
+        const lista = (pecas && pecas.length) ? pecas : [{desc:'', qtd:0, unit:0}];
+        lista.forEach(p => {
+            const row = tbody.insertRow();
+            row.innerHTML = `<td><input type="text" value="${escapeAttrOS(p.desc)}"></td><td><input type="number" class="p-qtd" value="${p.qtd}" oninput="calc()"></td><td><input type="number" step="0.01" class="p-unit" value="${p.unit}" oninput="calc()"></td><td><input type="text" class="p-sub" value="R$ 0,00" readonly></td><td class="no-print-btn"><button class="btn-remove" onclick="this.parentElement.parentElement.remove(); calc();">×</button></td>`;
+        });
+    }
+    function preencherServicos(servicos) {
+        const tbody = document.querySelector('#servicosTab tbody');
+        tbody.innerHTML = '';
+        const lista = (servicos && servicos.length) ? servicos : [{desc:'', tipo:'M.O. Direta', valor:0}];
+        lista.forEach(s => {
+            const row = tbody.insertRow();
+            row.innerHTML = `<td><input type="text" value="${escapeAttrOS(s.desc)}"></td><td><select><option ${s.tipo==='M.O. Direta'?'selected':''}>M.O. Direta</option><option ${s.tipo==='M.O. Indireta'?'selected':''}>M.O. Indireta</option></select></td><td><input type="number" step="0.01" class="s-val" value="${s.valor}" oninput="calc()"></td><td class="no-print-btn"><button class="btn-remove" onclick="this.parentElement.parentElement.remove(); calc();">×</button></td>`;
+        });
+    }
+    function preencherFormulario(os) {
+        document.getElementById('osClienteSelect').value = os.clienteId || '';
+        document.getElementById('osClienteNome').value = os.clienteNome || '';
+        document.getElementById('osClienteDoc').value = os.clienteDoc || '';
+        document.getElementById('osClienteContato').value = os.clienteContato || '';
+        document.getElementById('osDescricao').value = os.descricao || '';
+        document.getElementById('dataEmissao').value = os.dataEmissao || '';
+        document.getElementById('osPrevisao').value = os.previsao || '';
+        document.getElementById('osGarantia').value = os.garantia || '';
+        document.getElementById('autorizadoOS').checked = !!os.autorizado;
+        document.getElementById('osValorPago').value = os.valorPago || 0;
+        document.getElementById('osVencimento').value = os.vencimento || '';
+        preencherPecas(os.pecas);
+        preencherServicos(os.servicos);
+        calc();
+        atualizarExibicaoNumero();
+    }
+
+    // ---------- Ações principais ----------
+    function novaOS() {
+        osEditandoId = null;
+        document.getElementById('osClienteSelect').value = '';
+        document.getElementById('osClienteNome').value = '';
+        document.getElementById('osClienteDoc').value = '';
+        document.getElementById('osClienteContato').value = '';
+        document.getElementById('osDescricao').value = '';
+        document.getElementById('osPrevisao').value = '';
+        document.getElementById('osGarantia').value = '';
+        document.getElementById('autorizadoOS').checked = false;
+        document.getElementById('osValorPago').value = 0;
+        document.getElementById('osVencimento').value = '';
+        document.getElementById('dataEmissao').valueAsDate = new Date();
+        preencherPecas([]);
+        preencherServicos([]);
+        calc();
+        atualizarExibicaoNumero();
+    }
+
+    function salvarOS() {
+        const dados = coletarFormulario();
+        if (!dados.clienteNome) {
+            alert('Preencha ao menos o nome do cliente antes de salvar.');
+            return;
+        }
+        let os;
+        if (osEditandoId) {
+            os = ordens.find(o => o.id === osEditandoId);
+            if (!os) { osEditandoId = null; }
+        }
+        if (!os) {
+            os = { id: Date.now(), numero: null };
+            ordens.push(os);
+            osEditandoId = os.id;
+        }
+        Object.assign(os, dados);
+        if (dados.autorizado && !os.numero) {
+            const atual = obterContadorAtual();
+            os.numero = atual.toString().padStart(4, '0');
+            localStorage.setItem(CHAVE_CONTADOR, String(atual + 1));
+        }
+        salvarOrdensLocal();
+        atualizarExibicaoNumero();
+        renderResumoOS();
+        alert('OS salva com sucesso' + (os.numero ? (' — Nº ' + os.numero) : ' (como rascunho)') + '.');
+    }
+
+    function imprimirOS() {
+        irParaPaginaOS('nova');
+        window.print();
+    }
+
+    function editarOS(id) {
+        const os = ordens.find(o => o.id === id);
+        if (!os) return;
+        osEditandoId = id;
+        preencherFormulario(os);
+        irParaPaginaOS('nova');
+    }
+
+    function imprimirOSDaLista(id) {
+        editarOS(id);
+        setTimeout(() => window.print(), 50);
+    }
+
+    function excluirOS(id) {
+        if (!confirm('Excluir esta OS salva? Essa ação não pode ser desfeita.')) return;
+        ordens = ordens.filter(o => o.id !== id);
+        if (osEditandoId === id) novaOS();
+        salvarOrdensLocal();
+        renderResumoOS();
+    }
+
+    function desenharGraficoFinanceiroOS() {
+        const el = document.getElementById('grafico-financeiro-os');
+        if (!el) return;
+        let pago = 0, aReceber = 0, atrasado = 0;
+        ordens.forEach(os => {
+            pago += (os.valorPago || 0);
+            const aPagar = calcularAPagarOS(os);
+            if (aPagar > 0) {
+                if (situacaoPagamentoOS(os) === 'Atrasado') atrasado += aPagar;
+                else aReceber += aPagar;
+            }
+        });
+        const dados = [
+            { rotulo: 'Pago', valor: pago, cor: '#16a34a' },
+            { rotulo: 'A receber', valor: aReceber, cor: '#d97706' },
+            { rotulo: 'Atrasado', valor: atrasado, cor: '#ef4444' },
+        ];
+        const somaTotal = dados.reduce((s, d) => s + d.valor, 0);
+
+        document.getElementById('avisoGeralAtrasoOS').style.display = atrasado > 0 ? 'block' : 'none';
+
+        if (somaTotal <= 0) {
+            el.innerHTML = `<span style="font-size:0.8rem; color:var(--secondary);">Sem valores lançados ainda.</span>`;
+            return;
+        }
+        const raio = 70, centro = 80, circunferencia = 2 * Math.PI * raio;
+        let acumulado = 0;
+        const fatias = dados.filter(d => d.valor > 0).map(d => {
+            const fracao = d.valor / somaTotal;
+            const comprimento = fracao * circunferencia;
+            const dashoffset = circunferencia * 0.25 - acumulado;
+            acumulado += comprimento;
+            return `<circle cx="${centro}" cy="${centro}" r="${raio}" fill="none" stroke="${d.cor}" stroke-width="30" stroke-dasharray="${comprimento} ${circunferencia - comprimento}" stroke-dashoffset="${dashoffset}"></circle>`;
+        }).join('');
+        const legenda = dados.map(d => `
+            <div style="display:flex; align-items:center; gap:8px; font-size:0.8rem;">
+                <span style="width:11px; height:11px; border-radius:3px; background:${d.cor}; flex-shrink:0;"></span>
+                <span>${d.rotulo}: <b>R$ ${d.valor.toLocaleString('pt-BR',{minimumFractionDigits:2})}</b> <span style="color:var(--secondary);">(${Math.round(d.valor/somaTotal*100)}%)</span></span>
+            </div>
+        `).join('');
+        el.innerHTML = `
+            <svg width="160" height="160" viewBox="0 0 160 160" style="flex-shrink:0; transform: rotate(-90deg);">${fatias}</svg>
+            <div style="display:flex; flex-direction:column; gap:8px;">${legenda}</div>
+        `;
+    }
+
+    function renderResumoOS() {
+        const tbody = document.getElementById('tbodyOrdens');
+        const vazio = document.getElementById('vazioOrdens');
+        desenharGraficoFinanceiroOS();
+        if (!ordens.length) {
+            tbody.innerHTML = '';
+            vazio.style.display = 'block';
+            return;
+        }
+        vazio.style.display = 'none';
+        const ordenadas = ordens.slice().sort((a, b) => (b.dataEmissao || '').localeCompare(a.dataEmissao || ''));
+        tbody.innerHTML = ordenadas.map(os => {
+            const total = calcularTotalOS(os);
+            const totalFmt = 'R$ ' + total.toLocaleString('pt-BR', {minimumFractionDigits: 2});
+            const pagoFmt = 'R$ ' + (os.valorPago || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2});
+            const aPagarFmt = 'R$ ' + calcularAPagarOS(os).toLocaleString('pt-BR', {minimumFractionDigits: 2});
+            const situacao = situacaoPagamentoOS(os);
+            const corSituacao = situacao === 'Pago' ? '#16a34a' : situacao === 'Atrasado' ? '#ef4444' : '#d97706';
+            const numeroTag = os.numero ? os.numero : 'RASCUNHO';
+            const dataFmt = os.dataEmissao ? os.dataEmissao.split('-').reverse().join('/') : '—';
+            return `
+                <tr>
+                    <td>${numeroTag}</td>
+                    <td>${escapeAttrOS(os.clienteNome) || '—'}</td>
+                    <td>${dataFmt}</td>
+                    <td>${totalFmt}</td>
+                    <td>${pagoFmt}</td>
+                    <td>${aPagarFmt}</td>
+                    <td><span style="font-weight:700; font-size:0.75rem; color:${corSituacao};">${situacao}</span></td>
+                    <td>${os.autorizado ? 'Autorizado' : 'Rascunho'}</td>
+                    <td style="white-space:nowrap;">
+                        <button class="btn-acao-resumo" onclick="editarOS(${os.id})" title="Editar">✏️</button>
+                        <button class="btn-acao-resumo" onclick="imprimirOSDaLista(${os.id})" title="Imprimir">🖨️</button>
+                        <button class="btn-remove" onclick="excluirOS(${os.id})" title="Excluir">×</button>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    }
+
+    // ---------- Navegação por abas ----------
+    function irParaPaginaOS(nome) {
+        document.querySelectorAll('.pagina-os').forEach(sec => sec.classList.toggle('ativa', sec.dataset.pagina === nome));
+        document.querySelectorAll('.tab-btn-os').forEach(btn => btn.classList.toggle('ativa', btn.dataset.pagina === nome));
+    }
+    document.getElementById('tabs-nav-os').addEventListener('click', e => {
+        const btn = e.target.closest('.tab-btn-os');
+        if (btn) irParaPaginaOS(btn.dataset.pagina);
+    });
+
+    // ---------- Inicialização ----------
+    carregarOrdens();
+    renderResumoOS();
+    carregarClientesOS();
+    renderClientesOS();
+    popularSelectClientesOS();
+    document.getElementById('dataEmissao').valueAsDate = new Date();
+    atualizarExibicaoNumero();
+</script>
+</body>
+</html>

@@ -1,0 +1,2345 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Controle de Fretes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  :root{
+    --bg: #F1F1EC;
+    --paper: #FFFFFF;
+    --ink: #20241F;
+    --ink-soft: #565F58;
+    --line: #D8D9D1;
+    --asfalto: #232B2E;
+    --asfalto-2: #303B3F;
+    --rodovia: #0B6E4F;
+    --rodovia-dark: #08573F;
+    --rodovia-soft: #E3F1EB;
+    --amber: #B8790A;
+    --amber-soft: #FBF0DC;
+    --red: #B3402C;
+    --red-soft: #FBE7E2;
+  }
+
+  *{ box-sizing: border-box; }
+  html,body{ margin:0; padding:0; }
+  body{
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'IBM Plex Sans', system-ui, sans-serif;
+    line-height: 1.45;
+    padding-bottom: 60px;
+  }
+  h1,h2,h3, .display{
+    font-family: 'Oswald', system-ui, sans-serif;
+    letter-spacing: 0.01em;
+  }
+  .num{ font-variant-numeric: tabular-nums; }
+
+  /* ---------- Header ---------- */
+  header{
+    background: var(--asfalto);
+    color: #F4F4F0;
+    padding: 30px 24px 26px;
+    position: relative;
+  }
+  header .inner{ max-width: 1180px; margin: 0 auto; }
+  header h1{
+    font-size: 30px;
+    font-weight: 600;
+    margin: 0 0 4px;
+    display:flex;
+    align-items:center;
+    gap: 12px;
+  }
+  header h1 .mark{
+    width: 34px; height: 22px;
+    background: var(--rodovia);
+    border-radius: 4px;
+    display:inline-flex;
+    align-items:center; justify-content:center;
+    font-family:'Oswald',sans-serif;
+    font-size:12px; font-weight:700; color:#fff;
+    flex-shrink:0;
+  }
+  header p{
+    margin: 0;
+    color: #C7CBC5;
+    font-size: 14.5px;
+    max-width: 560px;
+  }
+  .estrada{
+    height: 3px;
+    margin-top: 20px;
+    background-image: repeating-linear-gradient(90deg, #F4F4F0 0 22px, transparent 22px 40px);
+    opacity: .45;
+  }
+
+  main{ max-width: 1180px; margin: 0 auto; padding: 26px 24px 0; }
+
+  /* ---------- Navegação por abas ---------- */
+  .tabs-nav{
+    display:flex;
+    gap: 4px;
+    margin-bottom: 22px;
+    border-bottom: 1px solid var(--line);
+    overflow-x: auto;
+  }
+  .tab-btn{
+    border: none;
+    background: transparent;
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--ink-soft);
+    padding: 11px 16px;
+    cursor: pointer;
+    white-space: nowrap;
+    border-bottom: 3px solid transparent;
+    margin-bottom: -1px;
+  }
+  .tab-btn:hover{ color: var(--ink); }
+  .tab-btn.ativa{
+    color: var(--rodovia-dark);
+    border-bottom-color: var(--rodovia);
+  }
+  .pagina{ display:none; }
+  .pagina.ativa{ display:block; }
+
+  /* ---------- Aviso ---------- */
+  .aviso{
+    background: var(--amber-soft);
+    border: 1px solid #EBD6A8;
+    color: #6B4A05;
+    border-radius: 8px;
+    padding: 12px 16px;
+    font-size: 13.5px;
+    display:flex;
+    gap: 10px;
+    align-items:flex-start;
+    margin-bottom: 24px;
+  }
+  .aviso strong{ font-weight:600; }
+  .aviso .icone{ font-size: 16px; line-height:1.3; }
+
+  /* ---------- Placas de resumo ---------- */
+  .placas{
+    display:grid;
+    grid-template-columns: repeat(auto-fit, minmax(190px,1fr));
+    gap: 12px;
+    margin-bottom: 30px;
+  }
+  .placa{
+    background: var(--rodovia);
+    color:#fff;
+    border-radius: 6px;
+    padding: 14px 16px 12px;
+    border: 2px solid var(--rodovia-dark);
+    position:relative;
+  }
+  .placa .rotulo{
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    opacity: .85;
+    margin-bottom: 6px;
+    font-weight: 500;
+  }
+  .placa .valor{
+    font-family:'Oswald',sans-serif;
+    font-size: 23px;
+    font-weight: 600;
+  }
+  .placa.recebido{ background: var(--rodovia); border-color: var(--rodovia-dark); }
+  .placa.receber{ background: var(--amber); border-color: #8F5D06; }
+  .placa.total{ background: var(--asfalto); border-color: #14181A; }
+
+  /* ---------- Cartões ---------- */
+  .cartao{
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    margin-bottom: 24px;
+    overflow:hidden;
+  }
+  .cartao .titulo{
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--line);
+    font-size: 17px;
+    font-weight: 600;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .cartao .titulo .sub{
+    font-family:'IBM Plex Sans',sans-serif;
+    font-weight:400;
+    font-size:12.5px;
+    color: var(--ink-soft);
+  }
+  .cartao .corpo{ padding: 18px 20px 20px; }
+
+  /* ---------- Formulário ---------- */
+  .campos{
+    display:grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px 14px;
+  }
+  .campo{ display:flex; flex-direction:column; gap: 5px; }
+  .campo.col-2{ grid-column: span 2; }
+  .campo label{ font-size: 12px; color: var(--ink-soft); font-weight:500; }
+  .campo input, .campo select{
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 9px 10px;
+    font-family: inherit;
+    font-size: 14px;
+    background: var(--paper);
+    color: var(--ink);
+  }
+  .campo input:focus, .campo select:focus{
+    outline: 2px solid var(--rodovia);
+    outline-offset: 1px;
+    border-color: var(--rodovia);
+  }
+  .campo .dica{ font-size: 11px; color: var(--ink-soft); }
+
+  /* ---------- Mapa ---------- */
+  .mapa-bloco{
+    margin-top: 18px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .mapa-barra{
+    display:flex;
+    align-items:center;
+    gap: 8px;
+    flex-wrap: wrap;
+    padding: 10px 12px;
+    background: #F7F7F3;
+    border-bottom: 1px solid var(--line);
+  }
+  .modo-btn{
+    border: 1px solid var(--line);
+    background: #fff;
+    color: var(--ink);
+    font-size: 12.5px;
+    font-weight: 600;
+    padding: 7px 12px;
+    border-radius: 6px;
+    display:flex;
+    align-items:center;
+    gap: 6px;
+  }
+  .modo-btn .ponto{
+    width: 9px; height: 9px;
+    border-radius: 50%;
+    display:inline-block;
+  }
+  .modo-btn.origem .ponto{ background: var(--rodovia); }
+  .modo-btn.destino .ponto{ background: var(--red); }
+  .modo-btn.ativo.origem{ background: var(--rodovia-soft); border-color: var(--rodovia); }
+  .modo-btn.ativo.destino{ background: var(--red-soft); border-color: var(--red); }
+  .modo-btn.ativo{ background: #E7ECEA; border-color: var(--asfalto-2); }
+  .modo-btn:hover{ background: #F0F0EB; }
+  .mapa-barra .separador{ flex: 1; }
+  .mapa-dica{
+    font-size: 12px;
+    color: var(--ink-soft);
+  }
+  #mapa{ height: 320px; width: 100%; cursor: default; }
+  #mapa.selecionando{ cursor: crosshair; }
+  .mapa-rodape{
+    padding: 10px 14px;
+    background: #FAFAF7;
+    border-top: 1px solid var(--line);
+    font-size: 13px;
+    display:flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .mapa-rodape .locais{ color: var(--ink-soft); }
+  .mapa-rodape .locais b{ color: var(--ink); font-weight:600; }
+  .mapa-distancia{
+    font-weight: 600;
+    color: var(--rodovia-dark);
+  }
+  .mapa-distancia.pendente{ color: var(--ink-soft); font-weight: 400; font-style: italic; }
+
+  .acoes-form{
+    margin-top: 16px;
+    display:flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 12px;
+  }
+
+  button{ font-family:'IBM Plex Sans',sans-serif; cursor:pointer; }
+  .btn{
+    border: none;
+    border-radius: 6px;
+    padding: 10px 18px;
+    font-size: 14px;
+    font-weight: 600;
+    background: var(--rodovia);
+    color: #fff;
+    transition: background .15s ease;
+  }
+  .btn:hover{ background: var(--rodovia-dark); }
+  .btn:disabled{ background:#A9AFA9; cursor:not-allowed; }
+  .btn-secundario{
+    background: transparent;
+    color: var(--ink);
+    border: 1px solid var(--line);
+    font-weight: 500;
+  }
+  .btn-secundario:hover{ background: #F2F2EE; }
+  .btn-icone{
+    background: transparent;
+    border: none;
+    font-size: 15px;
+    padding: 4px 6px;
+    border-radius: 5px;
+    color: var(--ink-soft);
+  }
+  .btn-icone:hover{ background: #EDEDE7; color: var(--ink); }
+
+  /* ---------- Tabela ---------- */
+  .tabela-wrap{ overflow-x:auto; }
+  table{ width:100%; border-collapse: collapse; font-size: 13.5px; }
+  table.tabela-lancamentos{ min-width: 920px; }
+  thead th{
+    text-align:left;
+    font-size: 11.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--ink-soft);
+    font-weight:600;
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--line);
+    white-space: nowrap;
+  }
+  tbody td{
+    padding: 10px 10px;
+    border-bottom: 1px solid var(--line);
+    vertical-align: middle;
+  }
+  tbody tr{ border-left: 4px solid transparent; }
+  tbody tr.status-pago{ border-left-color: var(--rodovia); }
+  tbody tr.status-pendente{ border-left-color: var(--amber); }
+  tbody tr.status-atrasado{ border-left-color: var(--red); }
+  tbody tr:hover{ background: #FAFAF7; }
+
+  .celula-editavel{
+    border: 1px solid transparent;
+    border-radius: 5px;
+    padding: 5px 6px;
+    width: 90px;
+    font-family: inherit;
+    font-size: 13.5px;
+    background: transparent;
+  }
+  .celula-editavel:focus{
+    outline:none;
+    border-color: var(--rodovia);
+    background:#fff;
+  }
+  select.status-select{
+    border: 1px solid transparent;
+    border-radius: 5px;
+    padding: 5px 6px;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    background: transparent;
+  }
+  select.status-select:focus{ outline:none; border-color: var(--line); }
+  .status-pago select.status-select{ color: var(--rodovia-dark); }
+  .status-pendente select.status-select{ color: var(--amber); }
+  .status-atrasado select.status-select{ color: var(--red); }
+
+  .dist-badge{
+    display:inline-flex;
+    align-items:center;
+    gap: 5px;
+    font-size: 12.5px;
+  }
+  .dist-ok{ color: var(--ink); font-weight:600; }
+  .dist-calc{ color: var(--ink-soft); font-style: italic; }
+  .dist-erro{ color: var(--red); }
+
+  .vazio{
+    text-align:center;
+    color: var(--ink-soft);
+    padding: 34px 10px;
+    font-size: 14px;
+  }
+
+  /* ---------- Rodapé de ações ---------- */
+  .rodape-acoes{
+    display:flex;
+    gap: 10px;
+    flex-wrap:wrap;
+    justify-content: flex-end;
+    padding-top: 4px;
+  }
+
+  footer{
+    max-width: 1180px;
+    margin: 10px auto 0;
+    padding: 0 24px 30px;
+    color: var(--ink-soft);
+    font-size: 12px;
+  }
+
+  @media (max-width: 760px){
+    .campos{ grid-template-columns: repeat(2,1fr); }
+    .campo.col-2{ grid-column: span 2; }
+  }
+
+  /* ---------- Área de impressão (PDF para cliente) ---------- */
+  #area-impressao{ display:none; }
+  @media print{
+    body *{ visibility: hidden; }
+    #area-impressao, #area-impressao *{ visibility: visible; }
+    #area-impressao{
+      display:block;
+      position:absolute; left:0; top:0; width:100%;
+      padding: 10mm;
+      font-family:'IBM Plex Sans', system-ui, sans-serif;
+      color:#1A1A1A;
+    }
+    .pdf-cabecalho{
+      display:flex; justify-content:space-between; align-items:flex-end;
+      border-bottom: 2px solid #232B2E;
+      padding-bottom: 10px;
+      margin-bottom: 18px;
+    }
+    .pdf-cabecalho h1{
+      font-family:'Oswald', sans-serif;
+      font-size: 22px; margin:0 0 3px; font-weight:600;
+    }
+    .pdf-cabecalho .contato{ font-size: 11.5px; color:#555; }
+    .pdf-cabecalho .selo{
+      font-family:'Oswald', sans-serif;
+      font-size: 11px; text-transform:uppercase; letter-spacing:.05em;
+      color:#0B6E4F; border:1.5px solid #0B6E4F; border-radius:4px;
+      padding: 4px 10px;
+    }
+    .pdf-info{
+      display:flex; justify-content:space-between;
+      font-size: 13px; margin-bottom: 16px;
+    }
+    .pdf-info b{ font-weight:600; }
+    table.pdf-tabela{ width:100%; border-collapse:collapse; font-size:11.5px; }
+    table.pdf-tabela th, table.pdf-tabela td{
+      border: 1px solid #B8B8B0; padding: 6px 8px; text-align:left;
+    }
+    table.pdf-tabela thead th{
+      background:#232B2E; color:#fff; font-weight:600; font-size:10.5px;
+      text-transform:uppercase; letter-spacing:.03em;
+    }
+    table.pdf-tabela tfoot td{ font-weight:700; background:#F0F0EC; }
+    table.pdf-tabela td.num, table.pdf-tabela th.num{ text-align:right; }
+    .pdf-rodape{
+      margin-top: 22px; font-size: 10px; color:#888;
+      border-top: 1px solid #DDD; padding-top: 8px;
+    }
+    @page{ size: A4 portrait; margin: 12mm; }
+  }
+
+  /* ---------- Badges ---------- */
+  .badge-rascunho{
+    display:inline-block;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .02em;
+    color: var(--ink-soft);
+    background: #EDEDE7;
+    border: 1px dashed #C7C8C0;
+    border-radius: 4px;
+    padding: 2px 7px;
+  }
+  .badge-numero{
+    display:inline-block;
+    font-family: 'Oswald', sans-serif;
+    font-weight: 600;
+    font-size: 13px;
+    color: var(--rodovia-dark);
+  }
+
+  .badge-situacao{
+    display:inline-block;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .02em;
+    border-radius: 4px;
+    padding: 2px 7px;
+  }
+  .badge-situacao.pago{ background: var(--rodovia-soft); color: var(--rodovia-dark); }
+  .badge-situacao.areceber{ background: #FBF0DC; color: var(--amber); }
+  .badge-situacao.atrasado{ background: var(--red-soft); color: var(--red); }
+  .aviso-atrasado{
+    font-size: 11px; color: var(--red); font-weight: 600; margin-top: 2px;
+  }
+
+  /* ---------- Modal ---------- */
+  .modal-overlay{
+    position: fixed; inset: 0;
+    background: rgba(20,24,22,.55);
+    display:flex; align-items:center; justify-content:center;
+    z-index: 1000; padding: 16px;
+  }
+  .modal-painel{
+    background: var(--paper);
+    border-radius: 10px;
+    max-width: 640px; width: 100%;
+    max-height: 90vh; overflow-y: auto;
+    box-shadow: 0 20px 60px rgba(0,0,0,.3);
+  }
+  .modal-cabecalho{
+    display:flex; justify-content:space-between; align-items:center;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--line);
+  }
+  .modal-cabecalho h3{ margin:0; font-size:17px; font-weight:600; }
+  .modal-corpo{ padding: 18px 20px; }
+  .modal-rodape{
+    display:flex; justify-content:flex-end; gap: 10px;
+    padding: 14px 20px;
+    border-top: 1px solid var(--line);
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="inner">
+    <a href="index.html" style="display:inline-flex; align-items:center; gap:6px; color:#C7CBC5; text-decoration:none; font-size:13px; margin-bottom:10px;">← Menu ALMA</a>
+    <h1><span class="mark">GO</span>Controle de Fretes</h1>
+    <p>Cadastre clientes, rotas e valores. A distância é calculada automaticamente pela rota rodoviária real assim que você preenche origem e destino.</p>
+    <div class="estrada"></div>
+  </div>
+</header>
+
+<main>
+
+  <nav class="tabs-nav" id="tabs-nav">
+    <button class="tab-btn" data-pagina="lancamentos">📋 Lançamentos</button>
+    <button class="tab-btn" data-pagina="clientes">👤 Clientes</button>
+    <button class="tab-btn" data-pagina="resumo">📅 Resumo Mensal</button>
+    <button class="tab-btn" data-pagina="relatorio">🖨️ Relatório</button>
+  </nav>
+
+  <section class="pagina" data-pagina="lancamentos">
+
+  <div class="aviso">
+    <span class="icone">💾</span>
+    <div>
+      <strong>Seus lançamentos são salvos automaticamente neste navegador</strong> — não precisa mais exportar backup toda vez.
+      Ainda assim, se você limpar os dados do navegador ou trocar de computador, esse salvamento se perde, então vale exportar um backup de vez em quando com os botões abaixo da tabela.
+      Se estiver vendo esta página dentro do Claude, abra o arquivo baixado direto no seu navegador para o salvamento automático funcionar.
+    </div>
+  </div>
+
+  <div class="placas" id="placas"></div>
+
+  <div class="cartao">
+    <div class="titulo">
+      Distribuição financeira
+      <span class="sub">Pago, a receber e atrasado (por valor)</span>
+    </div>
+    <div class="corpo">
+      <div id="grafico-financeiro" style="display:flex; align-items:center; gap:28px; flex-wrap:wrap;"></div>
+    </div>
+  </div>
+
+  </section>
+
+  <section class="pagina" data-pagina="resumo">
+
+  <div class="cartao">
+    <div class="titulo">
+      Resumo mensal
+      <span class="sub">Atualiza sozinho a cada frete lançado</span>
+    </div>
+    <div class="corpo">
+      <div class="tabela-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Mês</th>
+              <th>Fretes</th>
+              <th>Km rodado</th>
+              <th>Recebido</th>
+              <th>A receber</th>
+              <th>Total</th>
+            </tr>
+          </thead>
+          <tbody id="tbody-resumo-mensal"></tbody>
+        </table>
+      </div>
+      <div class="vazio" id="vazio-resumo-mensal" style="display:none;">Nenhum frete lançado ainda.</div>
+    </div>
+  </div>
+
+  </section>
+
+  <section class="pagina" data-pagina="clientes">
+
+  <div class="cartao">
+    <div class="titulo">
+      Clientes
+      <span class="sub" id="clientes-sub"></span>
+    </div>
+    <div class="corpo">
+      <form id="form-cliente">
+        <div class="campos">
+          <div class="campo col-2">
+            <label for="c-nome">Nome do cliente</label>
+            <input id="c-nome" type="text" placeholder="Ex: Fazenda Santa Rita / João da Silva" required>
+          </div>
+          <div class="campo">
+            <label for="c-cep">CEP</label>
+            <input id="c-cep" type="text" placeholder="75909-320" inputmode="numeric" maxlength="9">
+          </div>
+          <div class="campo">
+            <label for="c-doc">CPF/CNPJ</label>
+            <input id="c-doc" type="text" placeholder="000.000.000-00">
+          </div>
+          <div class="campo">
+            <label for="c-celular">Celular</label>
+            <input id="c-celular" type="text" placeholder="(64) 99999-9999">
+          </div>
+          <div class="campo">
+            <label for="c-email">E-mail</label>
+            <input id="c-email" type="email" placeholder="cliente@email.com">
+          </div>
+          <div class="campo col-2">
+            <label for="c-endereco">Endereço <span id="c-endereco-status" style="font-weight:400; color:var(--ink-soft);"></span></label>
+            <input id="c-endereco" type="text" placeholder="Preenchido automaticamente pelo CEP, ou digite manualmente">
+          </div>
+          <div class="campo col-2">
+            <label for="c-complemento">Complemento</label>
+            <input id="c-complemento" type="text" placeholder="Número, sala, ponto de referência">
+          </div>
+          <div class="campo col-2">
+            <label for="c-cidade">Cidade / UF</label>
+            <input id="c-cidade" type="text" placeholder="Rio Verde - GO">
+          </div>
+        </div>
+        <div class="acoes-form">
+          <button type="button" class="btn btn-secundario" id="btn-cancelar-edicao-cliente" style="display:none;">Cancelar edição</button>
+          <button type="submit" class="btn" id="btn-salvar-cliente">Cadastrar cliente</button>
+        </div>
+      </form>
+
+      <div class="tabela-wrap" style="margin-top:18px;">
+        <table>
+          <thead>
+            <tr>
+              <th>Nome</th>
+              <th>CPF/CNPJ</th>
+              <th>Contato</th>
+              <th>Cidade/UF</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="tbody-clientes"></tbody>
+        </table>
+      </div>
+      <div class="vazio" id="vazio-clientes" style="display:none;">Nenhum cliente cadastrado ainda. Cadastre acima antes de lançar um frete.</div>
+    </div>
+  </div>
+
+  </section>
+
+  <section class="pagina" data-pagina="lancamentos">
+
+  <div class="cartao">
+    <div class="titulo">
+      Novo frete
+      <span class="sub">Digite cidade/CEP/coordenadas ou clique no mapa abaixo para marcar origem e destino</span>
+    </div>
+    <div class="corpo">
+      <form id="form-frete">
+        <div class="campos">
+          <div class="campo col-2">
+            <label for="f-cliente">Cliente</label>
+            <select id="f-cliente" required></select>
+          </div>
+          <div class="campo">
+            <label for="f-data">Data</label>
+            <input id="f-data" type="date" required>
+          </div>
+          <div class="campo col-2">
+            <label for="f-origem">Origem</label>
+            <input id="f-origem" type="text" placeholder="Rio Verde - GO / CEP / -17.79, -50.92" required>
+          </div>
+          <div class="campo col-2">
+            <label for="f-destino">Destino</label>
+            <input id="f-destino" type="text" placeholder="Fazenda Santa Rita, Jataí - GO" required>
+          </div>
+          <div class="campo">
+            <label for="f-valorkm">Valor por km (R$)</label>
+            <input id="f-valorkm" type="number" min="0" step="0.01" placeholder="3,50" required>
+          </div>
+          <div class="campo">
+            <label for="f-valorpago">Valor já pago (R$)</label>
+            <input id="f-valorpago" type="number" min="0" step="0.01" placeholder="0,00">
+          </div>
+          <div class="campo">
+            <label for="f-vencimento">Vencimento (se houver saldo)</label>
+            <input id="f-vencimento" type="date">
+          </div>
+          <div class="campo">
+            <label for="f-autorizado">Autorizado?</label>
+            <div style="display:flex; align-items:center; gap:8px; height:37px;">
+              <input id="f-autorizado" type="checkbox" style="width:18px; height:18px; flex-shrink:0;">
+              <span style="font-size:12px; color:var(--ink-soft);">Gera número oficial</span>
+            </div>
+          </div>
+          <div class="campo">
+            <label for="f-ida-volta">Ida e volta?</label>
+            <div style="display:flex; align-items:center; gap:8px; height:37px;">
+              <input id="f-ida-volta" type="checkbox" style="width:18px; height:18px; flex-shrink:0;">
+              <span style="font-size:12px; color:var(--ink-soft);">Cobra a volta também</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="campos" id="f-bloco-volta" style="display:none; margin-top:-6px;">
+          <div class="campo col-2">
+            <label for="f-volta-tipo">Como calcular a volta</label>
+            <select id="f-volta-tipo">
+              <option value="dobro">Mesma rota — dobrar a distância da ida</option>
+              <option value="diferente">Rota diferente — informar abaixo</option>
+            </select>
+          </div>
+        </div>
+        <div class="campos" id="f-bloco-volta-rota" style="display:none; margin-top:-6px;">
+          <div class="campo col-2">
+            <label for="f-volta-origem">Origem da volta</label>
+            <input id="f-volta-origem" type="text" placeholder="Ex: Jataí - GO (padrão: o destino da ida)">
+          </div>
+          <div class="campo col-2">
+            <label for="f-volta-destino">Destino da volta</label>
+            <input id="f-volta-destino" type="text" placeholder="Ex: Rio Verde - GO (padrão: a origem da ida)">
+          </div>
+        </div>
+
+        <div class="mapa-bloco">
+          <div class="mapa-barra">
+            <button type="button" class="modo-btn origem" id="btn-modo-origem"><span class="ponto"></span>Marcar origem no mapa</button>
+            <button type="button" class="modo-btn destino" id="btn-modo-destino"><span class="ponto"></span>Marcar destino no mapa</button>
+            <span class="separador"></span>
+            <button type="button" class="modo-btn" id="btn-satelite">🛰️ Satélite</button>
+            <span class="mapa-dica" id="mapa-dica">Clique em um botão e depois no mapa</span>
+            <button type="button" class="btn-icone" id="btn-limpar-mapa" title="Limpar marcadores">🧹</button>
+          </div>
+          <div id="mapa"></div>
+          <div class="mapa-rodape">
+            <div class="locais">
+              <div><b>Origem:</b> <span id="rotulo-origem">não definida</span></div>
+              <div><b>Destino:</b> <span id="rotulo-destino">não definido</span></div>
+            </div>
+            <div class="mapa-distancia pendente" id="mapa-distancia">Distância aparece aqui quando origem e destino forem definidos</div>
+          </div>
+        </div>
+
+        <div class="acoes-form">
+          <button type="submit" class="btn">Adicionar frete</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="cartao">
+    <div class="titulo">
+      Lançamentos
+      <span class="sub" id="contagem-sub"></span>
+    </div>
+    <div class="corpo">
+      <div class="tabela-wrap">
+        <table class="tabela-lancamentos">
+          <thead>
+            <tr>
+              <th>Cliente</th>
+              <th>Nº Frete</th>
+              <th>Data</th>
+              <th>Origem</th>
+              <th>Destino</th>
+              <th>Distância</th>
+              <th>Valor/km</th>
+              <th>Valor total</th>
+              <th>Pago</th>
+              <th>Situação</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="tbody-fretes"></tbody>
+        </table>
+      </div>
+      <div id="vazio" class="vazio" style="display:none;">Nenhum frete cadastrado ainda. Use o formulário acima para começar.</div>
+      <div class="rodape-acoes">
+        <button class="btn-icone" id="btn-limpar-dados" title="Apagar todos os dados salvos neste navegador">🗑 Limpar tudo</button>
+        <button class="btn btn-secundario" id="btn-importar">Importar backup</button>
+        <input type="file" id="input-importar" accept="application/json" style="display:none;">
+        <button class="btn btn-secundario" id="btn-exportar-csv">Exportar CSV</button>
+        <button class="btn btn-secundario" id="btn-exportar-xlsx">Exportar XLSX</button>
+        <button class="btn" id="btn-exportar">Exportar backup (JSON)</button>
+      </div>
+    </div>
+  </div>
+
+  </section>
+
+  <section class="pagina" data-pagina="relatorio">
+
+  <div class="cartao">
+    <div class="titulo">
+      Relatório para cliente
+      <span class="sub">Gera um PDF formatado, pronto para enviar</span>
+    </div>
+    <div class="corpo">
+      <div class="campos">
+        <div class="campo col-2">
+          <label for="pdf-emissor-nome">Seu nome / Transportadora (aparece no PDF)</label>
+          <input id="pdf-emissor-nome" type="text" placeholder="Ex: José da Silva Transportes">
+        </div>
+        <div class="campo col-2">
+          <label for="pdf-emissor-contato">Contato (telefone / e-mail)</label>
+          <input id="pdf-emissor-contato" type="text" placeholder="(64) 99999-9999">
+        </div>
+        <div class="campo col-2">
+          <label for="pdf-cliente">Cliente</label>
+          <select id="pdf-cliente"></select>
+        </div>
+      </div>
+      <div class="acoes-form">
+        <button type="button" class="btn" id="btn-gerar-pdf">🖨️ Gerar PDF do cliente</button>
+      </div>
+    </div>
+  </div>
+
+  </section>
+
+</main>
+
+<div class="modal-overlay" id="modal-editar-frete" style="display:none;">
+  <div class="modal-painel">
+    <div class="modal-cabecalho">
+      <h3>Editar frete</h3>
+      <button type="button" class="btn-icone" id="btn-fechar-modal" title="Fechar">✕</button>
+    </div>
+    <div class="modal-corpo">
+      <div class="campos">
+        <div class="campo col-2">
+          <label for="m-cliente">Cliente</label>
+          <select id="m-cliente"></select>
+        </div>
+        <div class="campo">
+          <label for="m-data">Data</label>
+          <input id="m-data" type="date">
+        </div>
+        <div class="campo col-2">
+          <label for="m-origem">Origem</label>
+          <input id="m-origem" type="text">
+        </div>
+        <div class="campo col-2">
+          <label for="m-destino">Destino</label>
+          <input id="m-destino" type="text">
+        </div>
+        <div class="campo">
+          <label for="m-valorkm">Valor por km (R$)</label>
+          <input id="m-valorkm" type="number" min="0" step="0.01">
+        </div>
+        <div class="campo">
+          <label for="m-valorpago">Valor já pago (R$)</label>
+          <input id="m-valorpago" type="number" min="0" step="0.01">
+        </div>
+        <div class="campo">
+          <label for="m-vencimento">Vencimento (se houver saldo)</label>
+          <input id="m-vencimento" type="date">
+        </div>
+        <div class="campo col-2">
+          <label for="m-autorizado">Autorizado?</label>
+          <div style="display:flex; align-items:center; gap:8px; height:37px;">
+            <input id="m-autorizado" type="checkbox" style="width:18px; height:18px; flex-shrink:0;">
+            <span style="font-size:12px; color:var(--ink-soft);" id="m-numero-info"></span>
+          </div>
+        </div>
+        <div class="campo col-2">
+          <label for="m-ida-volta">Ida e volta?</label>
+          <div style="display:flex; align-items:center; gap:8px; height:37px;">
+            <input id="m-ida-volta" type="checkbox" style="width:18px; height:18px; flex-shrink:0;">
+            <span style="font-size:12px; color:var(--ink-soft);">Cobra a volta também</span>
+          </div>
+        </div>
+      </div>
+      <div class="campos" id="m-bloco-volta" style="display:none; margin-top:12px;">
+        <div class="campo col-2">
+          <label for="m-volta-tipo">Como calcular a volta</label>
+          <select id="m-volta-tipo">
+            <option value="dobro">Mesma rota — dobrar a distância da ida</option>
+            <option value="diferente">Rota diferente — informar abaixo</option>
+          </select>
+        </div>
+      </div>
+      <div class="campos" id="m-bloco-volta-rota" style="display:none; margin-top:12px;">
+        <div class="campo col-2">
+          <label for="m-volta-origem">Origem da volta</label>
+          <input id="m-volta-origem" type="text">
+        </div>
+        <div class="campo col-2">
+          <label for="m-volta-destino">Destino da volta</label>
+          <input id="m-volta-destino" type="text">
+        </div>
+      </div>
+    </div>
+    <div class="modal-rodape">
+      <button type="button" class="btn btn-secundario" id="btn-cancelar-edicao-frete">Cancelar</button>
+      <button type="button" class="btn" id="btn-salvar-edicao-frete">Salvar alterações</button>
+    </div>
+  </div>
+</div>
+
+
+<footer>
+  Distâncias calculadas via OpenStreetMap (Nominatim + OSRM) e ViaCEP, serviços públicos gratuitos — sujeitos a limite de uso e à disponibilidade de internet.
+</footer>
+
+<div id="area-impressao"></div>
+
+<script>
+(function(){
+  let fretes = [];
+  let contador = 1;
+  let clientes = [];
+  let contadorCliente = 1;
+  let clienteEditandoId = null;
+  let proximoNumeroOficial = 1;
+  let freteEditandoId = null;
+  let emissorNome = '';
+  let emissorContato = '';
+
+  const CHAVE_STORAGE = 'controleFretesDados_v1';
+
+  function salvarLocal(){
+    try{
+      localStorage.setItem(CHAVE_STORAGE, JSON.stringify({
+        fretes, contador, clientes, contadorCliente, proximoNumeroOficial, emissorNome, emissorContato
+      }));
+    }catch(e){
+      // localStorage indisponível (navegação privada, ou pré-visualização dentro do Claude) — segue só em memória
+    }
+  }
+
+  function carregarLocal(){
+    try{
+      const bruto = localStorage.getItem(CHAVE_STORAGE);
+      if (!bruto) return false;
+      const dados = JSON.parse(bruto);
+      if (dados && Array.isArray(dados.fretes)){
+        fretes = dados.fretes;
+        contador = dados.contador || (fretes.reduce((m,f) => Math.max(m, f.id || 0), 0) + 1);
+        clientes = Array.isArray(dados.clientes) ? dados.clientes : [];
+        contadorCliente = dados.contadorCliente || (clientes.reduce((m,c) => Math.max(m, c.id || 0), 0) + 1);
+        proximoNumeroOficial = dados.proximoNumeroOficial || 1;
+        emissorNome = dados.emissorNome || '';
+        emissorContato = dados.emissorContato || '';
+        document.getElementById('pdf-emissor-nome').value = emissorNome;
+        document.getElementById('pdf-emissor-contato').value = emissorContato;
+        migrarClientesAntigos();
+        ajustarProximoNumeroOficial();
+        migrarStatusAntigo();
+        return true;
+      }
+    }catch(e){}
+    return false;
+  }
+
+  // Garante que a numeração nunca repita um número já usado (ex: após migrar dados antigos)
+  function ajustarProximoNumeroOficial(){
+    let maior = 0;
+    fretes.forEach(f => {
+      if (f.numero){
+        const m = /^F-(\d+)$/.exec(f.numero);
+        if (m) maior = Math.max(maior, parseInt(m[1], 10));
+      }
+    });
+    if (proximoNumeroOficial <= maior) proximoNumeroOficial = maior + 1;
+  }
+
+  // Compatibilidade com versão anterior: fretes que tinham "cliente" como texto solto
+  // (sem clienteId) ganham um cadastro de cliente automático, para não perder dados.
+  function migrarClientesAntigos(){
+    let mudou = false;
+    fretes.forEach(f => {
+      if (!f.clienteId && f.cliente){
+        let c = clientes.find(x => x.nome.trim().toLowerCase() === String(f.cliente).trim().toLowerCase());
+        if (!c){
+          c = { id: contadorCliente++, nome: f.cliente, doc: '', celular: '', email: '', endereco: '', cidade: '' };
+          clientes.push(c);
+          mudou = true;
+        }
+        f.clienteId = c.id;
+        delete f.cliente;
+        mudou = true;
+      }
+    });
+    if (mudou) salvarLocal();
+  }
+
+  // Compatibilidade com versão anterior: fretes que tinham "status" (Pendente/Pago/Atrasado)
+  // ganham "valorPago" equivalente, já que o status agora é calculado automaticamente.
+  function migrarStatusAntigo(){
+    let mudou = false;
+    fretes.forEach(f => {
+      if (f.status !== undefined && f.valorPago === undefined){
+        const total = (typeof f.distancia === 'number') ? f.distancia * f.valorKm : 0;
+        f.valorPago = f.status === 'Pago' ? total : 0;
+        f.dataVencimento = f.dataVencimento || '';
+        delete f.status;
+        mudou = true;
+      }
+    });
+    if (mudou) salvarLocal();
+  }
+
+  const tbody = document.getElementById('tbody-fretes');
+  const vazio = document.getElementById('vazio');
+  const placas = document.getElementById('placas');
+  const contagemSub = document.getElementById('contagem-sub');
+  const tbodyClientes = document.getElementById('tbody-clientes');
+  const vazioClientes = document.getElementById('vazio-clientes');
+  const clientesSub = document.getElementById('clientes-sub');
+
+
+  const fmtMoeda = v => (v || 0).toLocaleString('pt-BR', { style:'currency', currency:'BRL' });
+  const fmtData = iso => {
+    if(!iso) return '';
+    const [ano,mes,dia] = iso.split('-');
+    return `${dia}/${mes}/${ano}`;
+  };
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+  // ---------- Clientes: helpers ----------
+  function clienteById(id){
+    return clientes.find(c => c.id === id) || null;
+  }
+  function nomeCliente(id){
+    const c = clienteById(id);
+    return c ? c.nome : '(cliente removido)';
+  }
+  function popularSelectClientes(selectEl, manterValorAtual){
+    const atual = manterValorAtual ? selectEl.value : '';
+    if (!clientes.length){
+      selectEl.innerHTML = '<option value="">Cadastre um cliente primeiro</option>';
+      return;
+    }
+    const ordenados = clientes.slice().sort((a,b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+    selectEl.innerHTML = ordenados.map(c => `<option value="${c.id}">${escapeHtml(c.nome)}</option>`).join('');
+    if (atual && [...selectEl.options].some(o => o.value === atual)) selectEl.value = atual;
+  }
+
+  // ---------- Numeração oficial de frete ----------
+  function gerarNumeroOficial(){
+    const numero = 'F-' + String(proximoNumeroOficial).padStart(4, '0');
+    proximoNumeroOficial++;
+    return numero;
+  }
+
+
+  // ---------- Geocodificação (cidade / CEP / coordenadas) ----------
+  function pareceCoordenada(s){
+    if(!s) return false;
+    if(!/^-?[0-9.]+$/.test(s)) return false;
+    return s.includes('.');
+  }
+
+  function extrairCoordenadasDiretas(texto){
+    let sep = null;
+    if (texto.includes(';')) sep = ';';
+    else if (texto.includes(',')) sep = ',';
+    if (!sep) return null;
+    const partes = texto.split(sep);
+    if (partes.length !== 2) return null;
+    const p1 = partes[0].trim(), p2 = partes[1].trim();
+    if (!pareceCoordenada(p1) || !pareceCoordenada(p2)) return null;
+    return { lat: parseFloat(p1), lon: parseFloat(p2) };
+  }
+
+  function extrairCEP(texto){
+    if(!/^[0-9\- ]+$/.test(texto)) return null;
+    const digitos = texto.replace(/[^0-9]/g,'');
+    if (digitos.length !== 8) return null;
+    return digitos.slice(0,5) + '-' + digitos.slice(5);
+  }
+
+  async function geocodificar(endereco){
+    const url = 'https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=br&q=' +
+                encodeURIComponent(endereco + ', Brasil');
+    const resp = await fetch(url);
+    if(!resp.ok) throw new Error('nominatim');
+    const data = await resp.json();
+    if(!data || !data.length) return null;
+    return { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon) };
+  }
+
+  async function geocodificarPostalCode(cepLimpo){
+    const cepFormatado = cepLimpo.slice(0,5) + '-' + cepLimpo.slice(5);
+    const url = 'https://nominatim.openstreetmap.org/search?format=json&limit=1&country=Brazil&postalcode=' + encodeURIComponent(cepFormatado);
+    const resp = await fetch(url);
+    if(!resp.ok) return null;
+    const data = await resp.json();
+    if(!data || !data.length) return null;
+    return { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon) };
+  }
+
+  async function geocodificarPorCEP(cep){
+    const cepLimpo = cep.replace(/\D/g, '');
+
+    // 1) tenta achar direto pelo CEP (busca estruturada por postalcode no Nominatim)
+    const porCep = await geocodificarPostalCode(cepLimpo);
+    if (porCep) return porCep;
+    await sleep(1000);
+
+    // 2) consulta o ViaCEP para descobrir o endereço
+    const resp = await fetch('https://viacep.com.br/ws/' + cepLimpo + '/json/');
+    if(!resp.ok) throw new Error('viacep');
+    const data = await resp.json();
+    if(data.erro) return null;
+
+    // 3) tenta geocodificar em ordem decrescente de especificidade — se a rua exata
+    //    não for encontrada, cai para bairro+cidade, depois só a cidade
+    const tentativas = [
+      [data.logradouro, data.bairro, data.localidade, data.uf],
+      [data.bairro, data.localidade, data.uf],
+      [data.localidade, data.uf],
+    ].map(partes => partes.filter(Boolean).join(', ')).filter((v, i, arr) => v && arr.indexOf(v) === i);
+
+    for (const endereco of tentativas){
+      const coords = await geocodificar(endereco);
+      if (coords) return coords;
+      await sleep(1000);
+    }
+    return null;
+  }
+
+  async function obterCoordenadas(textoOriginal){
+    const texto = textoOriginal.trim();
+    const direta = extrairCoordenadasDiretas(texto);
+    if (direta) return direta;
+    const cep = extrairCEP(texto);
+    if (cep) return await geocodificarPorCEP(cep);
+    return await geocodificar(texto);
+  }
+
+  async function calcularRota(c1, c2){
+    const url = `https://router.project-osrm.org/route/v1/driving/${c1.lon},${c1.lat};${c2.lon},${c2.lat}?overview=false`;
+    const resp = await fetch(url);
+    if(!resp.ok) throw new Error('osrm');
+    const data = await resp.json();
+    if(!data.routes || !data.routes.length) return null;
+    return data.routes[0].distance / 1000;
+  }
+
+  async function calcularDistancia(origem, destino){
+    try{
+      const c1 = await obterCoordenadas(origem);
+      if(!c1) return { erro: 'Origem não encontrada' };
+      await sleep(1000);
+      const c2 = await obterCoordenadas(destino);
+      if(!c2) return { erro: 'Destino não encontrado' };
+      const km = await calcularRota(c1, c2);
+      if(km == null) return { erro: 'Rota não encontrada' };
+      return { km: Math.round(km * 10) / 10 };
+    }catch(e){
+      return { erro: 'Sem internet ou serviço indisponível' };
+    }
+  }
+
+  // ---------- Mapa interativo ----------
+  const inputOrigem = document.getElementById('f-origem');
+  const inputDestino = document.getElementById('f-destino');
+
+  let mapaLeaflet, marcadorOrigem, marcadorDestino, linhaRota, linhaReta;
+  let camadaRuas, camadaSatelite, satelitesAtivo = false;
+  let modoSelecao = null;
+  let mapaDisponivel = false;
+  let iconeOrigem, iconeDestino;
+  let previewCoords = { origem: null, destino: null };
+  let previewOrigemTexto = '', previewDestinoTexto = '', previewDistanciaKm = null;
+  let previewDebounce = null;
+
+  function initMapa(){
+    if (typeof L === 'undefined'){
+      throw new Error('Biblioteca do mapa (Leaflet) não carregou — verifique sua internet.');
+    }
+
+    iconeOrigem = L.divIcon({ className:'', html:'<div style="width:16px;height:16px;border-radius:50%;background:#0B6E4F;border:2px solid #fff;box-shadow:0 0 0 2px #0B6E4F;"></div>', iconSize:[16,16], iconAnchor:[8,8] });
+    iconeDestino = L.divIcon({ className:'', html:'<div style="width:16px;height:16px;border-radius:50%;background:#B3402C;border:2px solid #fff;box-shadow:0 0 0 2px #B3402C;"></div>', iconSize:[16,16], iconAnchor:[8,8] });
+
+    mapaLeaflet = L.map('mapa').setView([-17.7943, -50.9269], 7);
+
+    camadaRuas = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+    });
+    camadaSatelite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+      maxZoom: 19,
+      attribution: 'Tiles &copy; Esri — Source: Esri, Maxar, Earthstar Geographics'
+    });
+
+    camadaRuas.addTo(mapaLeaflet);
+
+    mapaLeaflet.on('click', e => {
+      if (!modoSelecao) return;
+      definirPonto(modoSelecao, e.latlng.lat, e.latlng.lng, { atualizarCampo: true });
+    });
+
+    mapaDisponivel = true;
+  }
+
+  function mostrarMapaIndisponivel(){
+    const bloco = document.getElementById('mapa').closest('.mapa-bloco');
+    if (bloco){
+      bloco.innerHTML = `<div style="padding:16px; font-size:13px; color:var(--ink-soft);">
+        🗺️ O mapa não carregou (sem internet ou bloqueado pela rede). Isso não afeta o resto da planilha —
+        você ainda pode digitar cidade, CEP ou coordenadas nos campos Origem/Destino normalmente.
+      </div>`;
+    }
+  }
+
+  function alternarSatelite(){
+    if (!mapaDisponivel) return;
+    const btn = document.getElementById('btn-satelite');
+    satelitesAtivo = !satelitesAtivo;
+    if (satelitesAtivo){
+      mapaLeaflet.removeLayer(camadaRuas);
+      camadaSatelite.addTo(mapaLeaflet);
+      btn.classList.add('ativo');
+      btn.textContent = '🗺️ Mapa comum';
+    } else {
+      mapaLeaflet.removeLayer(camadaSatelite);
+      camadaRuas.addTo(mapaLeaflet);
+      btn.classList.remove('ativo');
+      btn.textContent = '🛰️ Satélite';
+    }
+  }
+
+  function ativarModo(tipo){
+    if (!mapaDisponivel) return;
+    modoSelecao = (modoSelecao === tipo) ? null : tipo;
+    document.getElementById('btn-modo-origem').classList.toggle('ativo', modoSelecao === 'origem');
+    document.getElementById('btn-modo-destino').classList.toggle('ativo', modoSelecao === 'destino');
+    document.getElementById('mapa').classList.toggle('selecionando', !!modoSelecao);
+    document.getElementById('mapa-dica').textContent = modoSelecao
+      ? `Clique no mapa para marcar o ${modoSelecao === 'origem' ? 'ponto de origem' : 'ponto de destino'}`
+      : 'Clique em um botão e depois no mapa';
+  }
+
+  function encerrarModo(){
+    modoSelecao = null;
+    document.getElementById('btn-modo-origem').classList.remove('ativo');
+    document.getElementById('btn-modo-destino').classList.remove('ativo');
+    document.getElementById('mapa').classList.remove('selecionando');
+    document.getElementById('mapa-dica').textContent = 'Clique em um botão e depois no mapa';
+  }
+
+  async function definirPonto(tipo, lat, lon, opcoes){
+    if (!mapaDisponivel) return;
+    opcoes = opcoes || {};
+    previewCoords[tipo] = { lat, lon };
+
+    if (tipo === 'origem'){
+      if (marcadorOrigem) marcadorOrigem.setLatLng([lat, lon]);
+      else {
+        marcadorOrigem = L.marker([lat, lon], { icon: iconeOrigem, draggable: true }).addTo(mapaLeaflet);
+        marcadorOrigem.on('dragend', () => {
+          const p = marcadorOrigem.getLatLng();
+          definirPonto('origem', p.lat, p.lng, { atualizarCampo: true });
+        });
+      }
+    } else {
+      if (marcadorDestino) marcadorDestino.setLatLng([lat, lon]);
+      else {
+        marcadorDestino = L.marker([lat, lon], { icon: iconeDestino, draggable: true }).addTo(mapaLeaflet);
+        marcadorDestino.on('dragend', () => {
+          const p = marcadorDestino.getLatLng();
+          definirPonto('destino', p.lat, p.lng, { atualizarCampo: true });
+        });
+      }
+    }
+
+    if (opcoes.atualizarCampo){
+      const campo = tipo === 'origem' ? inputOrigem : inputDestino;
+      campo.value = `${lat.toFixed(6)}, ${lon.toFixed(6)}`;
+    }
+
+    const rotuloEl = document.getElementById(tipo === 'origem' ? 'rotulo-origem' : 'rotulo-destino');
+    rotuloEl.textContent = 'localizando…';
+    reverseGeocode(lat, lon).then(nome => {
+      rotuloEl.textContent = nome || `${lat.toFixed(5)}, ${lon.toFixed(5)}`;
+    });
+
+    ajustarZoomMarcadores();
+
+    if (opcoes.atualizarCampo){
+      if (tipo === 'origem' && !marcadorDestino) ativarModo('destino');
+      else encerrarModo();
+    }
+
+    agendarPreview();
+  }
+
+  function ajustarZoomMarcadores(){
+    const pontos = [];
+    if (marcadorOrigem) pontos.push(marcadorOrigem.getLatLng());
+    if (marcadorDestino) pontos.push(marcadorDestino.getLatLng());
+    if (pontos.length === 1) mapaLeaflet.setView(pontos[0], Math.max(mapaLeaflet.getZoom(), 11));
+    else if (pontos.length === 2) mapaLeaflet.fitBounds(L.latLngBounds(pontos), { padding: [40,40] });
+  }
+
+  async function reverseGeocode(lat, lon){
+    try{
+      const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=14`;
+      const resp = await fetch(url);
+      if(!resp.ok) return null;
+      const data = await resp.json();
+      return data.display_name || null;
+    }catch(e){
+      return null;
+    }
+  }
+
+  function agendarPreview(){
+    clearTimeout(previewDebounce);
+    const el = document.getElementById('mapa-distancia');
+    if (previewCoords.origem && previewCoords.destino){
+      el.textContent = 'calculando distância…';
+      el.classList.add('pendente');
+    }
+    previewDebounce = setTimeout(atualizarPreviewDistancia, 600);
+  }
+
+  async function atualizarPreviewDistancia(){
+    const el = document.getElementById('mapa-distancia');
+    if (!previewCoords.origem || !previewCoords.destino){
+      el.textContent = 'Distância aparece aqui quando origem e destino forem definidos';
+      el.classList.add('pendente');
+      return;
+    }
+    desenharLinhaReta();
+    try{
+      const resultado = await calcularRotaDetalhada(previewCoords.origem, previewCoords.destino);
+      if (!resultado){
+        el.textContent = 'Não foi possível calcular a rota entre os pontos';
+        el.classList.add('pendente');
+        return;
+      }
+      previewDistanciaKm = resultado.km;
+      previewOrigemTexto = inputOrigem.value.trim();
+      previewDestinoTexto = inputDestino.value.trim();
+      el.textContent = `Distância pela rota: ${resultado.km.toLocaleString('pt-BR',{maximumFractionDigits:1})} km`;
+      el.classList.remove('pendente');
+      desenharRota(resultado.coords);
+    }catch(e){
+      el.textContent = 'Erro ao calcular a rota (verifique a internet)';
+      el.classList.add('pendente');
+    }
+  }
+
+  function desenharLinhaReta(){
+    if (linhaReta){ mapaLeaflet.removeLayer(linhaReta); linhaReta = null; }
+    if (!previewCoords.origem || !previewCoords.destino) return;
+    linhaReta = L.polyline(
+      [[previewCoords.origem.lat, previewCoords.origem.lon],[previewCoords.destino.lat, previewCoords.destino.lon]],
+      { color:'#565F58', weight:2, dashArray:'6 6', opacity:.7 }
+    ).addTo(mapaLeaflet);
+  }
+
+  function desenharRota(coords){
+    if (linhaRota){ mapaLeaflet.removeLayer(linhaRota); linhaRota = null; }
+    if (!coords || !coords.length) return;
+    linhaRota = L.polyline(coords, { color:'#0B6E4F', weight:4, opacity:.85 }).addTo(mapaLeaflet);
+    if (linhaReta){ mapaLeaflet.removeLayer(linhaReta); linhaReta = null; }
+  }
+
+  async function calcularRotaDetalhada(c1, c2){
+    const url = `https://router.project-osrm.org/route/v1/driving/${c1.lon},${c1.lat};${c2.lon},${c2.lat}?overview=full&geometries=geojson`;
+    const resp = await fetch(url);
+    if(!resp.ok) throw new Error('osrm');
+    const data = await resp.json();
+    if(!data.routes || !data.routes.length) return null;
+    const rota = data.routes[0];
+    const coords = rota.geometry.coordinates.map(([lon,lat]) => [lat, lon]);
+    return { km: Math.round((rota.distance/1000) * 10) / 10, coords };
+  }
+
+  function limparMapa(){
+    try{
+      if (!mapaDisponivel) return;
+      if (marcadorOrigem){ mapaLeaflet.removeLayer(marcadorOrigem); marcadorOrigem = null; }
+      if (marcadorDestino){ mapaLeaflet.removeLayer(marcadorDestino); marcadorDestino = null; }
+      if (linhaRota){ mapaLeaflet.removeLayer(linhaRota); linhaRota = null; }
+      if (linhaReta){ mapaLeaflet.removeLayer(linhaReta); linhaReta = null; }
+      previewCoords = { origem: null, destino: null };
+      previewDistanciaKm = null;
+      previewOrigemTexto = ''; previewDestinoTexto = '';
+      document.getElementById('rotulo-origem').textContent = 'não definida';
+      document.getElementById('rotulo-destino').textContent = 'não definido';
+      const el = document.getElementById('mapa-distancia');
+      el.textContent = 'Distância aparece aqui quando origem e destino forem definidos';
+      el.classList.add('pendente');
+      encerrarModo();
+    }catch(e){
+      // nunca deixa uma falha do mapa travar o restante da página
+    }
+  }
+
+  // Sincroniza texto digitado manualmente (cidade/CEP) com o mapa, sem sobrescrever o campo
+  async function sincronizarCampoComMapa(tipo){
+    if (!mapaDisponivel) return;
+    const campo = tipo === 'origem' ? inputOrigem : inputDestino;
+    const texto = campo.value.trim();
+    const rotuloEl = document.getElementById(tipo === 'origem' ? 'rotulo-origem' : 'rotulo-destino');
+
+    if (!texto){
+      previewCoords[tipo] = null;
+      if (tipo === 'origem' && marcadorOrigem){ mapaLeaflet.removeLayer(marcadorOrigem); marcadorOrigem = null; }
+      if (tipo === 'destino' && marcadorDestino){ mapaLeaflet.removeLayer(marcadorDestino); marcadorDestino = null; }
+      rotuloEl.textContent = tipo === 'origem' ? 'não definida' : 'não definido';
+      agendarPreview();
+      return;
+    }
+
+    // se já está no formato de coordenadas, não precisa geocodificar de novo
+    const direta = extrairCoordenadasDiretas(texto);
+    if (direta){
+      definirPonto(tipo, direta.lat, direta.lon, { atualizarCampo: false });
+      return;
+    }
+
+    rotuloEl.textContent = 'localizando…';
+    const coords = await obterCoordenadas(texto);
+    if (!coords){
+      rotuloEl.textContent = 'não encontrado';
+      return;
+    }
+    definirPonto(tipo, coords.lat, coords.lon, { atualizarCampo: false });
+  }
+
+  document.getElementById('btn-modo-origem').addEventListener('click', () => ativarModo('origem'));
+  document.getElementById('btn-modo-destino').addEventListener('click', () => ativarModo('destino'));
+  document.getElementById('btn-satelite').addEventListener('click', alternarSatelite);
+  document.getElementById('btn-limpar-mapa').addEventListener('click', limparMapa);
+  inputOrigem.addEventListener('blur', () => sincronizarCampoComMapa('origem'));
+  inputDestino.addEventListener('blur', () => sincronizarCampoComMapa('destino'));
+
+  // ---------- Estado / render ----------
+  function valorTotal(f){
+    if (typeof f.distancia !== 'number') return null;
+    return f.distancia * f.valorKm;
+  }
+
+  function hojeISO(){
+    return new Date().toISOString().slice(0, 10);
+  }
+
+  // Quanto ainda falta pagar deste frete (nunca negativo). null enquanto a distância não foi calculada.
+  function valorAPagar(f){
+    const total = valorTotal(f);
+    if (total == null) return null;
+    const aPagar = total - (f.valorPago || 0);
+    return aPagar > 0.009 ? Math.round(aPagar * 100) / 100 : 0;
+  }
+
+  // 'Pago' | 'A receber' | 'Atrasado' | 'Calculando'
+  function situacaoPagamento(f){
+    const aPagar = valorAPagar(f);
+    if (aPagar == null) return 'Calculando';
+    if (aPagar <= 0) return 'Pago';
+    if (f.dataVencimento && f.dataVencimento < hojeISO()) return 'Atrasado';
+    return 'A receber';
+  }
+
+  function renderPlacas(){
+    const total = fretes.length;
+    const km = fretes.reduce((s,f) => s + (typeof f.distancia === 'number' ? f.distancia : 0), 0);
+    const recebido = fretes.reduce((s,f) => s + (f.valorPago || 0), 0);
+    const aReceber = fretes.filter(f => situacaoPagamento(f) === 'A receber').reduce((s,f) => s + (valorAPagar(f) || 0), 0);
+    const atrasado = fretes.filter(f => situacaoPagamento(f) === 'Atrasado').reduce((s,f) => s + (valorAPagar(f) || 0), 0);
+    const geral = fretes.reduce((s,f) => s + (valorTotal(f) || 0), 0);
+
+    placas.innerHTML = `
+      <div class="placa">
+        <div class="rotulo">Total de fretes</div>
+        <div class="valor num">${total}</div>
+      </div>
+      <div class="placa">
+        <div class="rotulo">Km rodado</div>
+        <div class="valor num">${km.toLocaleString('pt-BR',{maximumFractionDigits:1})} km</div>
+      </div>
+      <div class="placa recebido">
+        <div class="rotulo">Recebido (pago)</div>
+        <div class="valor num">${fmtMoeda(recebido)}</div>
+      </div>
+      <div class="placa receber">
+        <div class="rotulo">A receber</div>
+        <div class="valor num">${fmtMoeda(aReceber)}</div>
+      </div>
+      <div class="placa" style="background:var(--red); border-color:#8a2f1f;">
+        <div class="rotulo">Atrasado</div>
+        <div class="valor num">${fmtMoeda(atrasado)}</div>
+      </div>
+      <div class="placa total">
+        <div class="rotulo">Valor total geral</div>
+        <div class="valor num">${fmtMoeda(geral)}</div>
+      </div>
+    `;
+
+    desenharGraficoFinanceiro(recebido, aReceber, atrasado);
+  }
+
+  // Gráfico de pizza (SVG puro) — Pago / A receber / Atrasado, por valor
+  function desenharGraficoFinanceiro(pago, aReceber, atrasado){
+    const el = document.getElementById('grafico-financeiro');
+    if (!el) return;
+    const dados = [
+      { rotulo: 'Pago', valor: pago, cor: 'var(--rodovia)' },
+      { rotulo: 'A receber', valor: aReceber, cor: 'var(--amber)' },
+      { rotulo: 'Atrasado', valor: atrasado, cor: 'var(--red)' },
+    ];
+    const somaTotal = dados.reduce((s, d) => s + d.valor, 0);
+
+    if (somaTotal <= 0){
+      el.innerHTML = `<span style="font-size:13px; color:var(--ink-soft);">Sem valores lançados ainda.</span>`;
+      return;
+    }
+
+    const raio = 70, centro = 80, circunferencia = 2 * Math.PI * raio;
+    let acumulado = 0;
+    const fatias = dados.filter(d => d.valor > 0).map(d => {
+      const fracao = d.valor / somaTotal;
+      const comprimento = fracao * circunferencia;
+      const dashoffset = circunferencia * 0.25 - acumulado; // começa no topo (12h), sentido horário
+      acumulado += comprimento;
+      return `<circle cx="${centro}" cy="${centro}" r="${raio}" fill="none" stroke="${d.cor}"
+                stroke-width="30" stroke-dasharray="${comprimento} ${circunferencia - comprimento}"
+                stroke-dashoffset="${dashoffset}"></circle>`;
+    }).join('');
+
+    const legenda = dados.map(d => `
+      <div style="display:flex; align-items:center; gap:8px; font-size:13px;">
+        <span style="width:11px; height:11px; border-radius:3px; background:${d.cor}; flex-shrink:0;"></span>
+        <span>${d.rotulo}: <b>${fmtMoeda(d.valor)}</b> <span style="color:var(--ink-soft);">(${somaTotal > 0 ? Math.round(d.valor / somaTotal * 100) : 0}%)</span></span>
+      </div>
+    `).join('');
+
+    el.innerHTML = `
+      <svg width="160" height="160" viewBox="0 0 160 160" style="flex-shrink:0; transform: rotate(-90deg);">
+        ${fatias}
+      </svg>
+      <div style="display:flex; flex-direction:column; gap:8px;">${legenda}</div>
+    `;
+  }
+
+  function statusClasse(f){
+    const situacao = situacaoPagamento(f);
+    if (situacao === 'Pago') return 'status-pago';
+    if (situacao === 'Atrasado') return 'status-atrasado';
+    return 'status-pendente';
+  }
+
+  function gerarSituacaoHtml(f){
+    const situacao = situacaoPagamento(f);
+    const aPagar = valorAPagar(f);
+    if (situacao === 'Calculando'){
+      return `<span style="font-size:11.5px; color:var(--ink-soft); font-style:italic;">calculando…</span>`;
+    }
+    const classeCss = situacao === 'Pago' ? 'pago' : situacao === 'Atrasado' ? 'atrasado' : 'areceber';
+    return `
+      <div style="display:flex; flex-direction:column; gap:3px;">
+        <span class="badge-situacao ${classeCss}">${situacao}</span>
+        ${aPagar > 0 ? `
+          <span style="font-size:11px; color:var(--ink-soft);">${fmtMoeda(aPagar)} a pagar</span>
+          <input class="celula-editavel num" style="width:125px; font-size:11px;" type="date"
+                 value="${f.dataVencimento || ''}" data-campo="vencimento" data-id="${f.id}" title="Vencimento">
+        ` : ''}
+      </div>
+    `;
+  }
+
+  function renderTabela(){
+    contagemSub.textContent = fretes.length ? `${fretes.length} frete(s)` : '';
+    vazio.style.display = fretes.length ? 'none' : 'block';
+
+    tbody.innerHTML = fretes.map(f => {
+      let distHtml;
+      if (f.distStatus === 'calculando') distHtml = `<span class="dist-badge dist-calc">calculando…</span>`;
+      else if (f.distStatus === 'erro') distHtml = `<span class="dist-badge dist-erro">${f.distErro}</span> <button class="btn-icone" data-acao="recalcular" data-id="${f.id}" title="Tentar novamente">↻</button>`;
+      else {
+        const idaVoltaTag = f.idaEVolta ? ` <span style="font-size:10.5px; color:var(--ink-soft);">(ida e volta)</span>` : '';
+        distHtml = `<span class="dist-badge dist-ok">${f.distancia.toLocaleString('pt-BR',{maximumFractionDigits:1})} km</span>${idaVoltaTag} <button class="btn-icone" data-acao="recalcular" data-id="${f.id}" title="Recalcular">↻</button>`;
+      }
+
+      const total = valorTotal(f);
+      const totalHtml = total == null ? '—' : fmtMoeda(total);
+      const numeroHtml = f.numero
+        ? `<span class="badge-numero">${escapeHtml(f.numero)}</span>`
+        : `<span class="badge-rascunho">RASCUNHO</span>`;
+
+      const situacaoHtml = gerarSituacaoHtml(f);
+
+      return `
+        <tr class="${statusClasse(f)}">
+          <td>${escapeHtml(nomeCliente(f.clienteId))}</td>
+          <td>${numeroHtml}</td>
+          <td><input class="celula-editavel num" style="width:130px;" type="date" value="${f.data}" data-campo="data" data-id="${f.id}"></td>
+          <td>${escapeHtml(f.origem)}</td>
+          <td>${escapeHtml(f.destino)}</td>
+          <td>${distHtml}</td>
+          <td>
+            <input class="celula-editavel num" type="number" min="0" step="0.01"
+                   value="${f.valorKm}" data-campo="valorkm" data-id="${f.id}">
+          </td>
+          <td class="num">${totalHtml}</td>
+          <td>
+            <input class="celula-editavel num" type="number" min="0" step="0.01"
+                   value="${f.valorPago || 0}" data-campo="valorpago" data-id="${f.id}">
+          </td>
+          <td>${situacaoHtml}</td>
+          <td>
+            <button class="btn-icone" data-acao="relatorio" data-id="${f.id}" title="Gerar relatório deste frete">🖨️</button>
+            <button class="btn-icone" data-acao="editar" data-id="${f.id}" title="Editar frete">✏️</button>
+            <button class="btn-icone" data-acao="remover" data-id="${f.id}" title="Remover">🗑</button>
+          </td>
+        </tr>
+      `;
+    }).join('');
+  }
+
+  function escapeHtml(s){
+    return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  const MESES_PT = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+
+  function renderResumoMensal(){
+    const tbodyResumo = document.getElementById('tbody-resumo-mensal');
+    const vazioResumo = document.getElementById('vazio-resumo-mensal');
+
+    if (!fretes.length){
+      tbodyResumo.innerHTML = '';
+      vazioResumo.style.display = 'block';
+      return;
+    }
+    vazioResumo.style.display = 'none';
+
+    const grupos = {};
+    fretes.forEach(f => {
+      if (!f.data) return;
+      const chave = f.data.slice(0, 7); // 'YYYY-MM'
+      if (!grupos[chave]) grupos[chave] = { fretes: 0, km: 0, recebido: 0, aReceber: 0 };
+      grupos[chave].fretes += 1;
+      grupos[chave].km += (typeof f.distancia === 'number' ? f.distancia : 0);
+      grupos[chave].recebido += (f.valorPago || 0);
+      grupos[chave].aReceber += (valorAPagar(f) || 0);
+    });
+
+    const chaves = Object.keys(grupos).sort().reverse();
+
+    tbodyResumo.innerHTML = chaves.map(chave => {
+      const [ano, mesNum] = chave.split('-');
+      const nomeMes = MESES_PT[parseInt(mesNum, 10) - 1] || chave;
+      const g = grupos[chave];
+      const total = g.recebido + g.aReceber;
+      return `
+        <tr>
+          <td>${nomeMes} de ${ano}</td>
+          <td class="num">${g.fretes}</td>
+          <td class="num">${g.km.toLocaleString('pt-BR',{maximumFractionDigits:1})} km</td>
+          <td class="num" style="color:var(--rodovia-dark); font-weight:600;">${fmtMoeda(g.recebido)}</td>
+          <td class="num" style="color:var(--amber); font-weight:600;">${fmtMoeda(g.aReceber)}</td>
+          <td class="num" style="font-weight:600;">${fmtMoeda(total)}</td>
+        </tr>
+      `;
+    }).join('');
+  }
+
+  function renderClientes(){
+    clientesSub.textContent = clientes.length ? `${clientes.length} cliente(s)` : '';
+    vazioClientes.style.display = clientes.length ? 'none' : 'block';
+
+    const ordenados = clientes.slice().sort((a,b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+    tbodyClientes.innerHTML = ordenados.map(c => {
+      const contato = [c.celular, c.email].filter(Boolean).join(' · ') || '—';
+      return `
+        <tr>
+          <td>${escapeHtml(c.nome)}</td>
+          <td>${escapeHtml(c.doc || '—')}</td>
+          <td>${escapeHtml(contato)}</td>
+          <td>${escapeHtml(c.cidade || '—')}</td>
+          <td>
+            <button class="btn-icone" data-acao="editar-cliente" data-id="${c.id}" title="Editar cliente">✏️</button>
+            <button class="btn-icone" data-acao="remover-cliente" data-id="${c.id}" title="Remover cliente">🗑</button>
+          </td>
+        </tr>
+      `;
+    }).join('');
+  }
+
+  function render(){
+    renderPlacas();
+    renderTabela();
+    renderResumoMensal();
+    renderClientes();
+    popularSelectClientes(document.getElementById('f-cliente'), true);
+    popularSelectClientes(document.getElementById('pdf-cliente'), true);
+    salvarLocal();
+  }
+
+  async function processarDistancia(f){
+    f.distStatus = 'calculando';
+    render();
+    const resultadoIda = await calcularDistancia(f.origem, f.destino);
+    if (resultadoIda.erro){
+      f.distStatus = 'erro';
+      f.distErro = resultadoIda.erro;
+      render();
+      return;
+    }
+    f.distanciaIda = resultadoIda.km;
+
+    if (f.idaEVolta){
+      if (f.voltaTipo === 'diferente'){
+        const voltaOrigem = (f.voltaOrigem || '').trim() || f.destino;
+        const voltaDestino = (f.voltaDestino || '').trim() || f.origem;
+        await sleep(500);
+        const resultadoVolta = await calcularDistancia(voltaOrigem, voltaDestino);
+        if (resultadoVolta.erro){
+          f.distStatus = 'erro';
+          f.distErro = 'Volta: ' + resultadoVolta.erro;
+          render();
+          return;
+        }
+        f.distanciaVolta = resultadoVolta.km;
+      } else {
+        f.distanciaVolta = f.distanciaIda;
+      }
+      f.distancia = Math.round((f.distanciaIda + f.distanciaVolta) * 10) / 10;
+    } else {
+      f.distanciaVolta = 0;
+      f.distancia = f.distanciaIda;
+    }
+
+    f.distStatus = 'ok';
+    render();
+  }
+
+  // Alternância dos blocos de "ida e volta" no formulário de novo frete
+  function atualizarBlocoVoltaNovo(){
+    const idaVolta = document.getElementById('f-ida-volta').checked;
+    document.getElementById('f-bloco-volta').style.display = idaVolta ? 'grid' : 'none';
+    const rotaDiferente = idaVolta && document.getElementById('f-volta-tipo').value === 'diferente';
+    document.getElementById('f-bloco-volta-rota').style.display = rotaDiferente ? 'grid' : 'none';
+  }
+  document.getElementById('f-ida-volta').addEventListener('change', atualizarBlocoVoltaNovo);
+  document.getElementById('f-volta-tipo').addEventListener('change', atualizarBlocoVoltaNovo);
+
+  // Alternância dos blocos de "ida e volta" no modal de edição
+  function atualizarBlocoVoltaModal(){
+    const idaVolta = document.getElementById('m-ida-volta').checked;
+    document.getElementById('m-bloco-volta').style.display = idaVolta ? 'grid' : 'none';
+    const rotaDiferente = idaVolta && document.getElementById('m-volta-tipo').value === 'diferente';
+    document.getElementById('m-bloco-volta-rota').style.display = rotaDiferente ? 'grid' : 'none';
+  }
+  document.getElementById('m-ida-volta').addEventListener('change', atualizarBlocoVoltaModal);
+  document.getElementById('m-volta-tipo').addEventListener('change', atualizarBlocoVoltaModal);
+
+  // ---------- Eventos ----------
+  document.getElementById('form-frete').addEventListener('submit', e => {
+    e.preventDefault();
+    const clienteId = Number(document.getElementById('f-cliente').value);
+    if (!clienteId){
+      alert('Cadastre e selecione um cliente antes de lançar o frete.');
+      return;
+    }
+    const autorizado = document.getElementById('f-autorizado').checked;
+    const idaEVolta = document.getElementById('f-ida-volta').checked;
+    const voltaTipo = document.getElementById('f-volta-tipo').value;
+    const voltaOrigem = document.getElementById('f-volta-origem').value.trim();
+    const voltaDestino = document.getElementById('f-volta-destino').value.trim();
+    const f = {
+      id: contador++,
+      clienteId,
+      numero: autorizado ? gerarNumeroOficial() : null,
+      autorizado,
+      data: document.getElementById('f-data').value,
+      origem: document.getElementById('f-origem').value.trim(),
+      destino: document.getElementById('f-destino').value.trim(),
+      valorKm: parseFloat(document.getElementById('f-valorkm').value) || 0,
+      valorPago: parseFloat(document.getElementById('f-valorpago').value) || 0,
+      dataVencimento: document.getElementById('f-vencimento').value || '',
+      idaEVolta, voltaTipo, voltaOrigem, voltaDestino,
+      distancia: null,
+      distanciaIda: null,
+      distanciaVolta: 0,
+      distStatus: 'calculando',
+      distErro: ''
+    };
+    // O atalho do mapa só cobre a distância de ida — com ida e volta, recalcula tudo.
+    const usarPreview = !idaEVolta && previewDistanciaKm != null
+      && previewOrigemTexto === f.origem
+      && previewDestinoTexto === f.destino;
+
+    fretes.push(f);
+    e.target.reset();
+    document.getElementById('f-valorpago').value = '';
+    document.getElementById('f-vencimento').value = '';
+    document.getElementById('f-autorizado').checked = false;
+    document.getElementById('f-ida-volta').checked = false;
+    document.getElementById('f-volta-tipo').value = 'dobro';
+    atualizarBlocoVoltaNovo();
+    document.getElementById('f-data').value = new Date().toISOString().slice(0,10);
+    popularSelectClientes(document.getElementById('f-cliente'), false);
+
+    if (usarPreview){
+      f.distStatus = 'ok';
+      f.distanciaIda = previewDistanciaKm;
+      f.distanciaVolta = 0;
+      f.distancia = previewDistanciaKm;
+      render();
+    } else {
+      render();
+      processarDistancia(f);
+    }
+
+    limparMapa();
+  });
+
+  tbody.addEventListener('click', e => {
+    const btn = e.target.closest('button[data-acao]');
+    if(!btn) return;
+    const id = Number(btn.dataset.id);
+    const f = fretes.find(x => x.id === id);
+    if(!f) return;
+    if (btn.dataset.acao === 'remover'){
+      fretes = fretes.filter(x => x.id !== id);
+      render();
+    } else if (btn.dataset.acao === 'recalcular'){
+      processarDistancia(f);
+    } else if (btn.dataset.acao === 'editar'){
+      abrirEdicaoFrete(id);
+    } else if (btn.dataset.acao === 'relatorio'){
+      gerarRelatorioPDF(f.clienteId, [f], 'Relatório de frete individual');
+    }
+  });
+
+  tbody.addEventListener('input', e => {
+    const campo = e.target.dataset.campo;
+    if (!campo) return;
+    const id = Number(e.target.dataset.id);
+    const f = fretes.find(x => x.id === id);
+    if (!f) return;
+
+    if (campo === 'valorkm' || campo === 'valorpago'){
+      if (campo === 'valorkm') f.valorKm = parseFloat(e.target.value) || 0;
+      else f.valorPago = parseFloat(e.target.value) || 0;
+
+      renderPlacas();
+      const row = e.target.closest('tr');
+      const total = valorTotal(f);
+      row.children[7].textContent = total == null ? '—' : fmtMoeda(total);
+      row.className = statusClasse(f);
+      row.children[9].innerHTML = gerarSituacaoHtml(f);
+      salvarLocal();
+    }
+  });
+
+  tbody.addEventListener('change', e => {
+    const campo = e.target.dataset.campo;
+    if (!campo) return;
+    const id = Number(e.target.dataset.id);
+    const f = fretes.find(x => x.id === id);
+    if (!f) return;
+
+    if (campo === 'vencimento'){
+      f.dataVencimento = e.target.value || '';
+      render();
+    } else if (campo === 'data'){
+      if (e.target.value){ f.data = e.target.value; render(); }
+      else { e.target.value = f.data; }
+    }
+  });
+
+  // ---------- Clientes: formulário e ações ----------
+  const formCliente = document.getElementById('form-cliente');
+  const btnSalvarCliente = document.getElementById('btn-salvar-cliente');
+  const btnCancelarEdicaoCliente = document.getElementById('btn-cancelar-edicao-cliente');
+  const campoCep = document.getElementById('c-cep');
+  const statusEndereco = document.getElementById('c-endereco-status');
+
+  function limparFormCliente(){
+    formCliente.reset();
+    clienteEditandoId = null;
+    btnSalvarCliente.textContent = 'Cadastrar cliente';
+    btnCancelarEdicaoCliente.style.display = 'none';
+    statusEndereco.textContent = '';
+  }
+
+  // Busca automática de endereço pelo CEP (ViaCEP)
+  campoCep.addEventListener('input', () => {
+    const digitos = campoCep.value.replace(/\D/g, '').slice(0, 8);
+    campoCep.value = digitos.length > 5 ? digitos.slice(0,5) + '-' + digitos.slice(5) : digitos;
+  });
+
+  campoCep.addEventListener('blur', async () => {
+    const digitos = campoCep.value.replace(/\D/g, '');
+    if (digitos.length !== 8){
+      statusEndereco.textContent = '';
+      return;
+    }
+    statusEndereco.textContent = '(buscando endereço…)';
+    try{
+      const resp = await fetch('https://viacep.com.br/ws/' + digitos + '/json/');
+      const data = await resp.json();
+      if (data.erro){
+        statusEndereco.textContent = '(CEP não encontrado)';
+        return;
+      }
+      const endereco = [data.logradouro, data.bairro].filter(Boolean).join(', ');
+      const cidadeUf = [data.localidade, data.uf].filter(Boolean).join(' - ');
+      if (endereco) document.getElementById('c-endereco').value = endereco;
+      if (cidadeUf) document.getElementById('c-cidade').value = cidadeUf;
+      statusEndereco.textContent = endereco ? '(preenchido pelo CEP)' : '(CEP sem logradouro cadastrado — preencha manualmente)';
+    }catch(e){
+      statusEndereco.textContent = '(sem internet — preencha manualmente)';
+    }
+  });
+
+  formCliente.addEventListener('submit', e => {
+    e.preventDefault();
+    const dados = {
+      nome: document.getElementById('c-nome').value.trim(),
+      cep: document.getElementById('c-cep').value.trim(),
+      doc: document.getElementById('c-doc').value.trim(),
+      celular: document.getElementById('c-celular').value.trim(),
+      email: document.getElementById('c-email').value.trim(),
+      endereco: document.getElementById('c-endereco').value.trim(),
+      complemento: document.getElementById('c-complemento').value.trim(),
+      cidade: document.getElementById('c-cidade').value.trim(),
+    };
+    if (!dados.nome){ return; }
+
+    if (clienteEditandoId){
+      const c = clienteById(clienteEditandoId);
+      if (c) Object.assign(c, dados);
+    } else {
+      clientes.push({ id: contadorCliente++, ...dados });
+    }
+    limparFormCliente();
+    render();
+  });
+
+  btnCancelarEdicaoCliente.addEventListener('click', limparFormCliente);
+
+  tbodyClientes.addEventListener('click', e => {
+    const btn = e.target.closest('button[data-acao]');
+    if (!btn) return;
+    const id = Number(btn.dataset.id);
+    const c = clienteById(id);
+    if (!c) return;
+
+    if (btn.dataset.acao === 'editar-cliente'){
+      clienteEditandoId = id;
+      document.getElementById('c-nome').value = c.nome;
+      document.getElementById('c-cep').value = c.cep || '';
+      document.getElementById('c-doc').value = c.doc || '';
+      document.getElementById('c-celular').value = c.celular || '';
+      document.getElementById('c-email').value = c.email || '';
+      document.getElementById('c-endereco').value = c.endereco || '';
+      document.getElementById('c-complemento').value = c.complemento || '';
+      document.getElementById('c-cidade').value = c.cidade || '';
+      statusEndereco.textContent = '';
+      btnSalvarCliente.textContent = 'Salvar alterações';
+      btnCancelarEdicaoCliente.style.display = 'inline-block';
+      formCliente.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    } else if (btn.dataset.acao === 'remover-cliente'){
+      const vinculados = fretes.filter(f => f.clienteId === id).length;
+      const aviso = vinculados
+        ? `Este cliente tem ${vinculados} frete(s) lançado(s). Os fretes serão mantidos, mas aparecerão como "cliente removido". Continuar?`
+        : 'Remover este cliente?';
+      if (!confirm(aviso)) return;
+      clientes = clientes.filter(x => x.id !== id);
+      if (clienteEditandoId === id) limparFormCliente();
+      render();
+    }
+  });
+
+  // ---------- Modal de edição de frete ----------
+  const modalFrete = document.getElementById('modal-editar-frete');
+
+  function abrirEdicaoFrete(id){
+    const f = fretes.find(x => x.id === id);
+    if (!f) return;
+    freteEditandoId = id;
+
+    popularSelectClientes(document.getElementById('m-cliente'), false);
+    document.getElementById('m-cliente').value = f.clienteId;
+    document.getElementById('m-data').value = f.data;
+    document.getElementById('m-origem').value = f.origem;
+    document.getElementById('m-destino').value = f.destino;
+    document.getElementById('m-valorkm').value = f.valorKm;
+    document.getElementById('m-valorpago').value = f.valorPago || 0;
+    document.getElementById('m-vencimento').value = f.dataVencimento || '';
+    document.getElementById('m-autorizado').checked = !!f.autorizado;
+    document.getElementById('m-numero-info').textContent = f.numero
+      ? `Número já emitido: ${f.numero} (não muda ao desmarcar)`
+      : 'Ainda sem número — será gerado ao marcar como autorizado';
+
+    document.getElementById('m-ida-volta').checked = !!f.idaEVolta;
+    document.getElementById('m-volta-tipo').value = f.voltaTipo || 'dobro';
+    document.getElementById('m-volta-origem').value = f.voltaOrigem || '';
+    document.getElementById('m-volta-destino').value = f.voltaDestino || '';
+    atualizarBlocoVoltaModal();
+
+    modalFrete.style.display = 'flex';
+  }
+
+  function fecharModalFrete(){
+    modalFrete.style.display = 'none';
+    freteEditandoId = null;
+  }
+
+  document.getElementById('btn-fechar-modal').addEventListener('click', fecharModalFrete);
+  document.getElementById('btn-cancelar-edicao-frete').addEventListener('click', fecharModalFrete);
+  modalFrete.addEventListener('click', e => {
+    if (e.target === modalFrete) fecharModalFrete();
+  });
+
+  document.getElementById('btn-salvar-edicao-frete').addEventListener('click', () => {
+    const f = fretes.find(x => x.id === freteEditandoId);
+    if (!f) return;
+
+    const novoClienteId = Number(document.getElementById('m-cliente').value);
+    const novaOrigem = document.getElementById('m-origem').value.trim();
+    const novoDestino = document.getElementById('m-destino').value.trim();
+    const novoIdaEVolta = document.getElementById('m-ida-volta').checked;
+    const novoVoltaTipo = document.getElementById('m-volta-tipo').value;
+    const novaVoltaOrigem = document.getElementById('m-volta-origem').value.trim();
+    const novaVoltaDestino = document.getElementById('m-volta-destino').value.trim();
+    const autorizadoAgora = document.getElementById('m-autorizado').checked;
+
+    const rotaMudou = novaOrigem !== f.origem || novoDestino !== f.destino
+      || novoIdaEVolta !== !!f.idaEVolta || novoVoltaTipo !== (f.voltaTipo || 'dobro')
+      || novaVoltaOrigem !== (f.voltaOrigem || '') || novaVoltaDestino !== (f.voltaDestino || '');
+
+    f.clienteId = novoClienteId || f.clienteId;
+    f.data = document.getElementById('m-data').value || f.data;
+    f.origem = novaOrigem;
+    f.destino = novoDestino;
+    f.valorKm = parseFloat(document.getElementById('m-valorkm').value) || 0;
+    f.valorPago = parseFloat(document.getElementById('m-valorpago').value) || 0;
+    f.dataVencimento = document.getElementById('m-vencimento').value || '';
+    f.autorizado = autorizadoAgora;
+    f.idaEVolta = novoIdaEVolta;
+    f.voltaTipo = novoVoltaTipo;
+    f.voltaOrigem = novaVoltaOrigem;
+    f.voltaDestino = novaVoltaDestino;
+    if (autorizadoAgora && !f.numero){
+      f.numero = gerarNumeroOficial();
+    }
+
+    fecharModalFrete();
+
+    if (rotaMudou){
+      f.distStatus = 'calculando';
+      f.distancia = null;
+      render();
+      processarDistancia(f);
+    } else {
+      render();
+    }
+  });
+
+  // ---------- Backup / Importar / Exportar CSV ----------
+  document.getElementById('btn-exportar').addEventListener('click', () => {
+    const dados = { fretes, contador, clientes, contadorCliente, proximoNumeroOficial, emissorNome, emissorContato };
+    const blob = new Blob([JSON.stringify(dados, null, 2)], { type: 'application/json' });
+    baixarBlob(blob, `controle-fretes-backup-${new Date().toISOString().slice(0,10)}.json`);
+  });
+
+  document.getElementById('btn-importar').addEventListener('click', () => {
+    document.getElementById('input-importar').click();
+  });
+
+  document.getElementById('input-importar').addEventListener('change', e => {
+    const arquivo = e.target.files[0];
+    if(!arquivo) return;
+    const leitor = new FileReader();
+    leitor.onload = evt => {
+      try{
+        const dados = JSON.parse(evt.target.result);
+        // Compatível com o backup antigo (só um array de fretes) e o novo (objeto completo)
+        if (Array.isArray(dados)){
+          fretes = dados;
+          contador = fretes.reduce((m,f) => Math.max(m, f.id || 0), 0) + 1;
+          clientes = clientes || [];
+          migrarClientesAntigos();
+        } else if (dados && Array.isArray(dados.fretes)){
+          fretes = dados.fretes;
+          contador = dados.contador || (fretes.reduce((m,f) => Math.max(m, f.id || 0), 0) + 1);
+          clientes = Array.isArray(dados.clientes) ? dados.clientes : [];
+          contadorCliente = dados.contadorCliente || (clientes.reduce((m,c) => Math.max(m, c.id || 0), 0) + 1);
+          proximoNumeroOficial = dados.proximoNumeroOficial || 1;
+          emissorNome = dados.emissorNome || '';
+          emissorContato = dados.emissorContato || '';
+          document.getElementById('pdf-emissor-nome').value = emissorNome;
+          document.getElementById('pdf-emissor-contato').value = emissorContato;
+          migrarClientesAntigos();
+        } else {
+          throw new Error('formato inválido');
+        }
+        ajustarProximoNumeroOficial();
+        migrarStatusAntigo();
+        render();
+      }catch(err){
+        alert('Não foi possível importar este arquivo. Verifique se é um backup exportado por esta mesma página.');
+      }
+    };
+    leitor.readAsText(arquivo);
+    e.target.value = '';
+  });
+
+  document.getElementById('btn-exportar-csv').addEventListener('click', () => {
+    const cabecalho = ['Cliente','Nº Frete','Autorizado','Data','Origem','Destino','Distância (km)','Valor/km (R$)','Valor Total (R$)','Valor Pago (R$)','A Pagar (R$)','Vencimento','Situação'];
+    const linhas = fretes.map(f => [
+      nomeCliente(f.clienteId), f.numero || 'RASCUNHO', f.autorizado ? 'Sim' : 'Não', fmtData(f.data), f.origem, f.destino,
+      typeof f.distancia === 'number' ? f.distancia.toFixed(1) : '',
+      f.valorKm.toFixed(2),
+      valorTotal(f) != null ? valorTotal(f).toFixed(2) : '',
+      (f.valorPago || 0).toFixed(2),
+      valorAPagar(f) != null ? valorAPagar(f).toFixed(2) : '',
+      f.dataVencimento ? fmtData(f.dataVencimento) : '',
+      situacaoPagamento(f)
+    ]);
+    const csv = [cabecalho, ...linhas].map(l => l.map(v => `"${String(v ?? '').replace(/"/g,'""')}"`).join(';')).join('\n');
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+    baixarBlob(blob, `controle-fretes-${new Date().toISOString().slice(0,10)}.csv`);
+  });
+
+  document.getElementById('btn-exportar-xlsx').addEventListener('click', () => {
+    const cabecalho = ['Cliente','Nº Frete','Autorizado','Data','Origem','Destino','Distância (km)','Valor/km (R$)','Valor Total (R$)','Valor Pago (R$)','A Pagar (R$)','Vencimento','Situação'];
+    const linhas = fretes.map(f => [
+      nomeCliente(f.clienteId), f.numero || 'RASCUNHO', f.autorizado ? 'Sim' : 'Não', fmtData(f.data), f.origem, f.destino,
+      typeof f.distancia === 'number' ? f.distancia : '',
+      f.valorKm,
+      valorTotal(f) != null ? valorTotal(f) : '',
+      f.valorPago || 0,
+      valorAPagar(f) != null ? valorAPagar(f) : '',
+      f.dataVencimento ? fmtData(f.dataVencimento) : '',
+      situacaoPagamento(f)
+    ]);
+    const wsFretes = XLSX.utils.aoa_to_sheet([cabecalho, ...linhas]);
+    wsFretes['!cols'] = [{wch:22},{wch:12},{wch:11},{wch:12},{wch:24},{wch:24},{wch:14},{wch:12},{wch:14},{wch:14},{wch:12},{wch:12},{wch:12}];
+
+    const clientesSheet = clientes.map(c => [c.nome, c.doc, c.celular, c.email, c.cep, c.endereco, c.complemento, c.cidade]);
+    const wsClientes = XLSX.utils.aoa_to_sheet([
+      ['Nome','CPF/CNPJ','Celular','E-mail','CEP','Endereço','Complemento','Cidade/UF'],
+      ...clientesSheet
+    ]);
+    wsClientes['!cols'] = [{wch:24},{wch:18},{wch:16},{wch:22},{wch:11},{wch:26},{wch:20},{wch:18}];
+
+    const total = fretes.length;
+    const km = fretes.reduce((s,f) => s + (typeof f.distancia === 'number' ? f.distancia : 0), 0);
+    const recebido = fretes.reduce((s,f) => s + (f.valorPago || 0), 0);
+    const aReceber = fretes.filter(f => situacaoPagamento(f) === 'A receber').reduce((s,f) => s + (valorAPagar(f)||0), 0);
+    const atrasado = fretes.filter(f => situacaoPagamento(f) === 'Atrasado').reduce((s,f) => s + (valorAPagar(f)||0), 0);
+    const wsResumo = XLSX.utils.aoa_to_sheet([
+      ['Resumo — Controle de Fretes'],
+      [],
+      ['Total de Fretes', total],
+      ['Total de KM Rodado', km],
+      ['Valor Total Recebido (Pago)', recebido],
+      ['Valor a Receber (dentro do prazo)', aReceber],
+      ['Valor Atrasado', atrasado],
+      ['Valor Total Geral', recebido + aReceber + atrasado],
+      [],
+      ['Exportado em', new Date().toLocaleString('pt-BR')],
+    ]);
+    wsResumo['!cols'] = [{wch:32},{wch:18}];
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, wsResumo, 'Resumo');
+    XLSX.utils.book_append_sheet(wb, wsFretes, 'Fretes');
+    XLSX.utils.book_append_sheet(wb, wsClientes, 'Clientes');
+    XLSX.writeFile(wb, `controle-fretes-${new Date().toISOString().slice(0,10)}.xlsx`);
+  });
+
+  // ---------- Relatório em PDF para o cliente ----------
+  document.getElementById('pdf-emissor-nome').addEventListener('input', e => {
+    emissorNome = e.target.value;
+    salvarLocal();
+  });
+  document.getElementById('pdf-emissor-contato').addEventListener('input', e => {
+    emissorContato = e.target.value;
+    salvarLocal();
+  });
+
+  // Gera e imprime um relatório em PDF. Se listaFretesFiltrada for omitida, usa todos os fretes do cliente.
+  function gerarRelatorioPDF(clienteId, listaFretesFiltrada, subtitulo){
+    const cli = clienteById(clienteId);
+    if (!cli){
+      alert('Cadastre e selecione um cliente antes de gerar o relatório.');
+      return;
+    }
+
+    const fretesRelatorio = (listaFretesFiltrada || fretes.filter(f => f.clienteId === clienteId))
+      .slice()
+      .sort((a, b) => (a.data || '').localeCompare(b.data || ''));
+
+    const linhas = fretesRelatorio.map(f => {
+      const total = valorTotal(f);
+      return `
+        <tr>
+          <td>${fmtData(f.data)}</td>
+          <td>${escapeHtml(f.numero || 'RASCUNHO')}</td>
+          <td>${escapeHtml(f.origem)}</td>
+          <td>${escapeHtml(f.destino)}</td>
+          <td class="num">${typeof f.distancia === 'number' ? f.distancia.toLocaleString('pt-BR',{maximumFractionDigits:1}) + ' km' : '—'}</td>
+          <td class="num">${fmtMoeda(f.valorKm)}</td>
+          <td class="num">${total != null ? fmtMoeda(total) : '—'}</td>
+          <td class="num">${fmtMoeda(f.valorPago || 0)}</td>
+          <td>${escapeHtml(situacaoPagamento(f))}</td>
+        </tr>
+      `;
+    }).join('');
+
+    const totalPago = fretesRelatorio.reduce((s, f) => s + (f.valorPago || 0), 0);
+    const totalGeral = fretesRelatorio.reduce((s, f) => s + (valorTotal(f) || 0), 0);
+    const totalKm = fretesRelatorio.reduce((s, f) => s + (typeof f.distancia === 'number' ? f.distancia : 0), 0);
+
+    const linhaDoc = cli.doc ? `<div><b>CPF/CNPJ:</b> ${escapeHtml(cli.doc)}</div>` : '';
+    const linhaContatoCliente = [cli.celular, cli.email].filter(Boolean).map(escapeHtml).join(' · ');
+    const linhaEndereco = [cli.endereco, cli.complemento, cli.cep ? 'CEP ' + cli.cep : '', cli.cidade].filter(Boolean).map(escapeHtml).join(' — ');
+
+    document.getElementById('area-impressao').innerHTML = `
+      <div class="pdf-cabecalho">
+        <div>
+          <h1>${escapeHtml(emissorNome || 'Controle de Fretes')}</h1>
+          ${emissorContato ? `<div class="contato">${escapeHtml(emissorContato)}</div>` : ''}
+        </div>
+        <div class="selo">${escapeHtml(subtitulo || 'Relatório de fretes')}</div>
+      </div>
+      <div class="pdf-info">
+        <div>
+          <div><b>Cliente:</b> ${escapeHtml(cli.nome)}</div>
+          ${linhaDoc}
+          ${linhaContatoCliente ? `<div><b>Contato:</b> ${linhaContatoCliente}</div>` : ''}
+          ${linhaEndereco ? `<div><b>Endereço:</b> ${linhaEndereco}</div>` : ''}
+        </div>
+        <div><b>Emitido em:</b> ${new Date().toLocaleDateString('pt-BR')}</div>
+      </div>
+      <table class="pdf-tabela">
+        <thead>
+          <tr>
+            <th>Data</th><th>Nº Frete</th><th>Origem</th><th>Destino</th>
+            <th class="num">Distância</th><th class="num">Valor/km</th><th class="num">Valor</th><th class="num">Pago</th><th>Situação</th>
+          </tr>
+        </thead>
+        <tbody>${linhas}</tbody>
+        <tfoot>
+          <tr>
+            <td colspan="4">Total — ${fretesRelatorio.length} frete(s)</td>
+            <td class="num">${totalKm.toLocaleString('pt-BR',{maximumFractionDigits:1})} km</td>
+            <td></td>
+            <td class="num">${fmtMoeda(totalGeral)}</td>
+            <td class="num">${fmtMoeda(totalPago)}</td>
+            <td></td>
+          </tr>
+        </tfoot>
+      </table>
+      <div class="pdf-rodape">Documento gerado automaticamente pelo sistema de controle de fretes.</div>
+    `;
+
+    window.print();
+  }
+
+  document.getElementById('btn-gerar-pdf').addEventListener('click', () => {
+    const clienteId = Number(document.getElementById('pdf-cliente').value);
+    gerarRelatorioPDF(clienteId, null, 'Relatório geral de fretes');
+  });
+
+  function baixarBlob(blob, nome){
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = nome;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  // data padrão = hoje
+  document.getElementById('f-data').value = new Date().toISOString().slice(0,10);
+
+  document.getElementById('btn-limpar-dados').addEventListener('click', () => {
+    if (!confirm('Isso vai apagar todos os fretes E clientes salvos neste navegador. Se quiser manter os dados, exporte um backup antes. Continuar?')) return;
+    fretes = [];
+    contador = 1;
+    clientes = [];
+    contadorCliente = 1;
+    proximoNumeroOficial = 1;
+    limparFormCliente();
+    try{ localStorage.removeItem(CHAVE_STORAGE); }catch(e){}
+    render();
+  });
+
+  // ---------- Navegação por abas ----------
+  function irParaPagina(nome){
+    document.querySelectorAll('.pagina').forEach(sec => {
+      sec.classList.toggle('ativa', sec.dataset.pagina === nome);
+    });
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.classList.toggle('ativa', btn.dataset.pagina === nome);
+    });
+    try{ localStorage.setItem('fretesAbaAtiva', nome); }catch(e){}
+    // o mapa precisa recalcular o tamanho ao voltar a ficar visível
+    if (nome === 'lancamentos' && mapaDisponivel && mapaLeaflet){
+      setTimeout(() => mapaLeaflet.invalidateSize(), 50);
+    }
+  }
+  document.getElementById('tabs-nav').addEventListener('click', e => {
+    const btn = e.target.closest('.tab-btn');
+    if (btn) irParaPagina(btn.dataset.pagina);
+  });
+  let abaInicial = 'lancamentos';
+  try{ abaInicial = localStorage.getItem('fretesAbaAtiva') || 'lancamentos'; }catch(e){}
+  irParaPagina('lancamentos'); // o mapa precisa estar visível para inicializar corretamente
+
+  carregarLocal();
+  try{
+    initMapa();
+  }catch(e){
+    mapaDisponivel = false;
+    mostrarMapaIndisponivel();
+  }
+  render();
+  irParaPagina(abaInicial); // agora sim, restaura a aba que o usuário deixou ativa
+})();
+</script>
+
+</body>
+</html>

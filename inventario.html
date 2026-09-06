@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Inventário - ALMA TRATORES</title>
+<style>
+    :root { --primary: #1e293b; --secondary: #64748b; --accent: #1e40af; --bg: #ffffff; }
+
+    body {
+        font-family: 'Segoe UI', Arial, sans-serif;
+        color: #334155;
+        margin: 0;
+        padding: 20px;
+        background-color: #EEF1F6;
+        background-image:
+            linear-gradient(rgba(30,64,175,0.055) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(30,64,175,0.055) 1px, transparent 1px);
+        background-size: 28px 28px;
+    }
+
+    .voltar-menu {
+        display: inline-flex; align-items: center; gap: 6px;
+        max-width: 900px; margin: 0 auto 12px; padding: 0 4px;
+        font-size: 0.8rem; color: var(--secondary); text-decoration: none;
+    }
+    .voltar-menu:hover { color: var(--accent); }
+
+    .container {
+        max-width: 900px;
+        background: white;
+        padding: 50px;
+        border-radius: 4px;
+        box-shadow: 0 0 20px rgba(0,0,0,0.05);
+        margin: auto;
+    }
+
+    h1 { color: var(--primary); margin: 0 0 6px; font-size: 1.8rem; letter-spacing: -1px; }
+    .subtitulo { color: var(--secondary); font-size: 0.85rem; margin-bottom: 26px; }
+
+    .grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; margin-bottom: 15px; }
+    .field-group { display: flex; flex-direction: column; }
+    label { font-size: 0.7rem; font-weight: 700; color: var(--secondary); text-transform: uppercase; margin-bottom: 4px; }
+    input, select { border: 1px solid #e2e8f0; padding: 8px; font-size: 0.9rem; color: #1e293b; border-radius: 2px; width: 100%; box-sizing: border-box; font-family: inherit; }
+
+    table { width: 100%; border-collapse: collapse; margin-top: 5px; }
+    th { background: #f8fafc; text-align: left; padding: 10px; font-size: 0.7rem; color: #475569; border: 1px solid #e2e8f0; text-transform: uppercase; }
+    td { border: 1px solid #e2e8f0; padding: 10px; font-size: 0.85rem; }
+
+    .acoes-inv { display: flex; gap: 10px; margin-top: 30px; }
+    .btn-secundario-os {
+        background: #f1f5f9; color: var(--primary); border: 1px solid #e2e8f0;
+        padding: 15px 20px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 0.9rem;
+    }
+    .btn-secundario-os:hover { background: #e2e8f0; }
+    .btn-imprimir {
+        background: var(--accent); color: white; padding: 15px; border: none; border-radius: 4px;
+        font-weight: bold; cursor: pointer; font-size: 1rem; flex: 0 0 auto;
+    }
+    .btn-acao-resumo { color: var(--accent); background: none; border: none; cursor: pointer; font-size: 1rem; }
+    .btn-remove { color: #f87171; background: none; border: none; cursor: pointer; font-size: 1.2rem; }
+
+    @media (max-width: 760px){ .grid{ grid-template-columns: 1fr 1fr; } }
+</style>
+</head>
+<body>
+
+<a href="tratores.html" class="voltar-menu">← Menu ALMA TRATORES</a>
+
+<div class="container">
+    <h1>📦 Inventário de Máquinas</h1>
+    <div class="subtitulo">Tudo que está disponível para venda no pátio — independente das Ordens de Serviço.</div>
+
+    <div class="grid">
+        <div class="field-group"><label>Tipo</label>
+            <select id="mqTipo">
+                <option>Trator</option>
+                <option>Colheitadeira</option>
+                <option>Pulverizador</option>
+                <option>Plantadeira</option>
+                <option>Grade</option>
+                <option>Implemento</option>
+                <option>Outro</option>
+            </select>
+        </div>
+        <div class="field-group"><label>Marca</label><input type="text" id="mqMarca" placeholder="John Deere, Case, Valtra..."></div>
+        <div class="field-group"><label>Modelo</label><input type="text" id="mqModelo"></div>
+        <div class="field-group"><label>Ano</label><input type="number" id="mqAno" placeholder="2020"></div>
+        <div class="field-group"><label>Nº Série / Chassi</label><input type="text" id="mqSerie"></div>
+        <div class="field-group"><label>Horímetro (h)</label><input type="number" id="mqHorimetro" placeholder="0"></div>
+        <div class="field-group"><label>Status</label>
+            <select id="mqStatus">
+                <option>Disponível</option>
+                <option>Em manutenção</option>
+                <option>Reservado</option>
+                <option>Locado</option>
+                <option>Vendido</option>
+            </select>
+        </div>
+        <div class="field-group"><label>Valor (R$)</label><input type="number" step="0.01" min="0" id="mqValor" placeholder="0,00"></div>
+        <div class="field-group"><label>Entrada no pátio</label><input type="date" id="mqEntrada"></div>
+        <div class="field-group" style="grid-column: 1 / -1;"><label>Observações</label><input type="text" id="mqObs"></div>
+    </div>
+    <div class="acoes-inv">
+        <button type="button" class="btn-secundario-os" id="btnCancelarEdicaoMaquina" style="display:none;" onclick="cancelarEdicaoMaquina()">Cancelar edição</button>
+        <button type="button" class="btn-imprimir" id="btnSalvarMaquina" onclick="salvarMaquina()">💾 Cadastrar máquina</button>
+    </div>
+
+    <table style="margin-top:34px;">
+        <thead>
+            <tr><th>Tipo</th><th>Marca / Modelo</th><th>Ano</th><th>Série</th><th>Horímetro</th><th>Status</th><th>Valor</th><th style="width:80px;"></th></tr>
+        </thead>
+        <tbody id="tbodyMaquinas"></tbody>
+    </table>
+    <div id="vazioMaquinas" style="display:none; text-align:center; color:var(--secondary); padding:30px;">Nenhuma máquina cadastrada ainda.</div>
+</div>
+
+<script>
+    function escapeAttrOS(s) {
+        return String(s ?? '').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
+    }
+
+    // ---------- Inventário de Máquinas ----------
+    const CHAVE_MAQUINAS = 'maquinasOS_Alma';
+    let maquinas = [];
+    let contadorMaquina = 1;
+    let maquinaEditandoId = null;
+
+    function carregarMaquinas() {
+        try {
+            const bruto = localStorage.getItem(CHAVE_MAQUINAS);
+            const dados = bruto ? JSON.parse(bruto) : null;
+            maquinas = dados && Array.isArray(dados.maquinas) ? dados.maquinas : [];
+            contadorMaquina = (dados && dados.contador) || (maquinas.reduce((m,x) => Math.max(m, x.id || 0), 0) + 1);
+        } catch (e) { maquinas = []; contadorMaquina = 1; }
+    }
+    function salvarMaquinasLocal() {
+        try { localStorage.setItem(CHAVE_MAQUINAS, JSON.stringify({ maquinas, contador: contadorMaquina })); } catch (e) {}
+    }
+
+    function limparFormMaquina() {
+        document.getElementById('mqTipo').value = 'Trator';
+        ['mqMarca','mqModelo','mqAno','mqSerie','mqHorimetro','mqValor','mqEntrada','mqObs'].forEach(id => document.getElementById(id).value = '');
+        document.getElementById('mqStatus').value = 'Disponível';
+        maquinaEditandoId = null;
+        document.getElementById('btnSalvarMaquina').textContent = '💾 Cadastrar máquina';
+        document.getElementById('btnCancelarEdicaoMaquina').style.display = 'none';
+    }
+    function cancelarEdicaoMaquina() { limparFormMaquina(); }
+
+    function salvarMaquina() {
+        const marca = document.getElementById('mqMarca').value.trim();
+        const modelo = document.getElementById('mqModelo').value.trim();
+        if (!marca && !modelo) { alert('Preencha ao menos a marca ou o modelo da máquina.'); return; }
+        const dados = {
+            tipo: document.getElementById('mqTipo').value,
+            marca, modelo,
+            ano: document.getElementById('mqAno').value.trim(),
+            serie: document.getElementById('mqSerie').value.trim(),
+            horimetro: parseFloat(document.getElementById('mqHorimetro').value) || 0,
+            status: document.getElementById('mqStatus').value,
+            valor: parseFloat(document.getElementById('mqValor').value) || 0,
+            entrada: document.getElementById('mqEntrada').value,
+            obs: document.getElementById('mqObs').value.trim(),
+        };
+        if (maquinaEditandoId) {
+            const m = maquinas.find(x => x.id === maquinaEditandoId);
+            if (m) Object.assign(m, dados);
+        } else {
+            maquinas.push({ id: contadorMaquina++, ...dados });
+        }
+        salvarMaquinasLocal();
+        limparFormMaquina();
+        renderMaquinas();
+    }
+
+    function editarMaquina(id) {
+        const m = maquinas.find(x => x.id === id);
+        if (!m) return;
+        maquinaEditandoId = id;
+        document.getElementById('mqTipo').value = m.tipo || 'Trator';
+        document.getElementById('mqMarca').value = m.marca || '';
+        document.getElementById('mqModelo').value = m.modelo || '';
+        document.getElementById('mqAno').value = m.ano || '';
+        document.getElementById('mqSerie').value = m.serie || '';
+        document.getElementById('mqHorimetro').value = m.horimetro || 0;
+        document.getElementById('mqStatus').value = m.status || 'Disponível';
+        document.getElementById('mqValor').value = m.valor || 0;
+        document.getElementById('mqEntrada').value = m.entrada || '';
+        document.getElementById('mqObs').value = m.obs || '';
+        document.getElementById('btnSalvarMaquina').textContent = '💾 Salvar alterações';
+        document.getElementById('btnCancelarEdicaoMaquina').style.display = 'inline-block';
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function excluirMaquina(id) {
+        if (!confirm('Remover esta máquina do inventário?')) return;
+        maquinas = maquinas.filter(x => x.id !== id);
+        if (maquinaEditandoId === id) limparFormMaquina();
+        salvarMaquinasLocal();
+        renderMaquinas();
+    }
+
+    function renderMaquinas() {
+        const tbody = document.getElementById('tbodyMaquinas');
+        const vazio = document.getElementById('vazioMaquinas');
+        if (!maquinas.length) { tbody.innerHTML = ''; vazio.style.display = 'block'; return; }
+        vazio.style.display = 'none';
+        const cores = { 'Disponível':'#16a34a', 'Em manutenção':'#d97706', 'Reservado':'#2563eb', 'Locado':'#7c3aed', 'Vendido':'#64748b' };
+        tbody.innerHTML = maquinas.map(m => {
+            const valorFmt = 'R$ ' + (m.valor || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2});
+            const cor = cores[m.status] || '#64748b';
+            return `
+                <tr>
+                    <td>${escapeAttrOS(m.tipo)}</td>
+                    <td>${escapeAttrOS(m.marca)} ${escapeAttrOS(m.modelo)}</td>
+                    <td>${escapeAttrOS(m.ano) || '—'}</td>
+                    <td>${escapeAttrOS(m.serie) || '—'}</td>
+                    <td>${(m.horimetro || 0).toLocaleString('pt-BR')} h</td>
+                    <td><span style="font-weight:700; font-size:0.75rem; color:${cor};">${escapeAttrOS(m.status)}</span></td>
+                    <td>${valorFmt}</td>
+                    <td style="white-space:nowrap;">
+                        <button class="btn-acao-resumo" onclick="editarMaquina(${m.id})" title="Editar">✏️</button>
+                        <button class="btn-remove" onclick="excluirMaquina(${m.id})" title="Excluir">×</button>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    }
+
+    // ---------- Inicialização ----------
+    carregarMaquinas();
+    renderMaquinas();
+</script>
+</body>
+</html>
