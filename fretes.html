@@ -560,18 +560,6 @@
 </head>
 <body>
 
-<div id="tela-login" class="tela-login">
-  <div class="login-card">
-    <div class="login-logo">🚛</div>
-    <h2>ALMA TRANSPORTES</h2>
-    <p>Entre com seu e-mail e senha para acessar os dados na nuvem.</p>
-    <input type="email" id="loginEmail" placeholder="E-mail" autocomplete="username">
-    <input type="password" id="loginSenha" placeholder="Senha" autocomplete="current-password">
-    <button type="button" id="btn-login">Entrar</button>
-    <div id="loginErro" class="login-erro"></div>
-  </div>
-</div>
-
 <div id="app-conteudo" style="display:none;">
 <header>
   <div class="inner">
@@ -2457,37 +2445,16 @@ const AlmaNuvem = (function(){
     irParaPagina(abaInicial); // agora sim, restaura a aba que o usuário deixou ativa
   }
 
-  function fazerLoginApp(){
-    const email = document.getElementById('loginEmail').value.trim();
-    const senha = document.getElementById('loginSenha').value;
-    const erroEl = document.getElementById('loginErro');
-    const btn = document.getElementById('btn-login');
-    erroEl.textContent = '';
-    btn.disabled = true;
-    btn.textContent = 'Entrando…';
-    AlmaNuvem.login(email, senha).catch(() => {
-      erroEl.textContent = 'E-mail ou senha incorretos.';
-    }).finally(() => {
-      btn.disabled = false;
-      btn.textContent = 'Entrar';
-    });
-  }
-  document.getElementById('btn-login').addEventListener('click', fazerLoginApp);
-  document.getElementById('loginSenha').addEventListener('keydown', e => { if (e.key === 'Enter') fazerLoginApp(); });
   document.getElementById('btn-logout').addEventListener('click', () => AlmaNuvem.logout());
 
+  // Esta página não tem tela de login própria: se não estiver logado, volta pro início sem piscar nada.
   let appIniciado = false;
   AlmaNuvem.aoMudarLogin(user => {
-    const telaLogin = document.getElementById('tela-login');
-    const appConteudo = document.getElementById('app-conteudo');
     if (user){
-      telaLogin.style.display = 'none';
-      appConteudo.style.display = 'block';
+      document.getElementById('app-conteudo').style.display = 'block';
       if (!appIniciado){ appIniciado = true; iniciarApp(); }
     } else {
-      telaLogin.style.display = 'flex';
-      appConteudo.style.display = 'none';
-      appIniciado = false;
+      window.location.href = 'index.html';
     }
   });
 })();

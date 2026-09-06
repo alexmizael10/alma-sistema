@@ -135,11 +135,11 @@
 </head>
 <body>
 
-<div id="tela-login" class="tela-login">
+<div id="tela-login" class="tela-login" style="display:none;">
   <div class="login-card">
     <div class="login-logo">🔒</div>
     <h2>ALMA</h2>
-    <p>Entre com seu e-mail e senha para acessar os sistemas.</p>
+    <p>Entre com seu e-mail e senha para continuar.</p>
     <input type="email" id="loginEmail" placeholder="E-mail" autocomplete="username">
     <input type="password" id="loginSenha" placeholder="Senha" autocomplete="current-password">
     <button type="button" id="btn-login">Entrar</button>
@@ -147,7 +147,7 @@
   </div>
 </div>
 
-<div id="app-conteudo" style="display:none;">
+<div id="app-conteudo">
   <div class="tela">
     <div class="cards">
       <a class="card tratores" href="tratores.html">
@@ -177,6 +177,36 @@
   if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
   const auth = firebase.auth();
 
+  let statusAuth = 'carregando'; // 'carregando' | 'logado' | 'deslogado'
+  let destinoPendente = null;
+
+  auth.onAuthStateChanged(user => {
+    statusAuth = user ? 'logado' : 'deslogado';
+    if (destinoPendente) {
+      if (statusAuth === 'logado') {
+        window.location.href = destinoPendente;
+      } else {
+        document.getElementById('tela-login').style.display = 'flex';
+      }
+    }
+  });
+
+  document.querySelectorAll('.card').forEach(card => {
+    card.addEventListener('click', e => {
+      e.preventDefault();
+      const destino = card.getAttribute('href');
+      if (statusAuth === 'logado'){
+        window.location.href = destino;
+      } else if (statusAuth === 'deslogado'){
+        destinoPendente = destino;
+        document.getElementById('tela-login').style.display = 'flex';
+      } else {
+        // autenticação ainda resolvendo (raro, é quase instantâneo) — guarda a intenção
+        destinoPendente = destino;
+      }
+    });
+  });
+
   function fazerLoginApp(){
     const email = document.getElementById('loginEmail').value.trim();
     const senha = document.getElementById('loginSenha').value;
@@ -185,7 +215,9 @@
     erroEl.textContent = '';
     btn.disabled = true;
     btn.textContent = 'Entrando…';
-    auth.signInWithEmailAndPassword(email, senha).catch(() => {
+    auth.signInWithEmailAndPassword(email, senha).then(() => {
+      if (destinoPendente) window.location.href = destinoPendente;
+    }).catch(() => {
       erroEl.textContent = 'E-mail ou senha incorretos.';
     }).finally(() => {
       btn.disabled = false;
@@ -194,11 +226,6 @@
   }
   document.getElementById('btn-login').addEventListener('click', fazerLoginApp);
   document.getElementById('loginSenha').addEventListener('keydown', e => { if (e.key === 'Enter') fazerLoginApp(); });
-
-  auth.onAuthStateChanged(user => {
-    document.getElementById('tela-login').style.display = user ? 'none' : 'flex';
-    document.getElementById('app-conteudo').style.display = user ? 'block' : 'none';
-  });
 </script>
 </body>
 </html>

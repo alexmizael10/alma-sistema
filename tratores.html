@@ -159,18 +159,6 @@
 </head>
 <body>
 
-<div id="tela-login" class="tela-login">
-  <div class="login-card">
-    <div class="login-logo">🔒</div>
-    <h2>ALMA</h2>
-    <p>Entre com seu e-mail e senha para acessar os sistemas.</p>
-    <input type="email" id="loginEmail" placeholder="E-mail" autocomplete="username">
-    <input type="password" id="loginSenha" placeholder="Senha" autocomplete="current-password">
-    <button type="button" id="btn-login">Entrar</button>
-    <div id="loginErro" class="login-erro"></div>
-  </div>
-</div>
-
 <div id="app-conteudo" style="display:none;">
   <a href="index.html" class="voltar-menu">← Menu ALMA</a>
 
@@ -212,27 +200,13 @@
   if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
   const auth = firebase.auth();
 
-  function fazerLoginApp(){
-    const email = document.getElementById('loginEmail').value.trim();
-    const senha = document.getElementById('loginSenha').value;
-    const erroEl = document.getElementById('loginErro');
-    const btn = document.getElementById('btn-login');
-    erroEl.textContent = '';
-    btn.disabled = true;
-    btn.textContent = 'Entrando…';
-    auth.signInWithEmailAndPassword(email, senha).catch(() => {
-      erroEl.textContent = 'E-mail ou senha incorretos.';
-    }).finally(() => {
-      btn.disabled = false;
-      btn.textContent = 'Entrar';
-    });
-  }
-  document.getElementById('btn-login').addEventListener('click', fazerLoginApp);
-  document.getElementById('loginSenha').addEventListener('keydown', e => { if (e.key === 'Enter') fazerLoginApp(); });
-
+  // Esta página não tem tela de login própria: se não estiver logado, volta pro início sem piscar nada.
   auth.onAuthStateChanged(user => {
-    document.getElementById('tela-login').style.display = user ? 'none' : 'flex';
-    document.getElementById('app-conteudo').style.display = user ? 'block' : 'none';
+    if (user){
+      document.getElementById('app-conteudo').style.display = 'block';
+    } else {
+      window.location.href = 'index.html';
+    }
   });
 </script>
 </body>
