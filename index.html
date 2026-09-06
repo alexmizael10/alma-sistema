@@ -9,6 +9,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 <style>
   :root{
     --ink: #1e293b;
@@ -149,6 +150,18 @@
   </div>
 </div>
 
+<div id="tela-troca-senha" class="tela-login" style="display:none;">
+  <div class="login-card">
+    <div class="login-logo">🔑</div>
+    <h2>Defina sua senha</h2>
+    <p>Este é seu primeiro acesso. Por segurança, escolha uma senha só sua (a pessoa que te cadastrou não vai saber qual é).</p>
+    <input type="password" id="novaSenha" placeholder="Nova senha (mín. 6 caracteres)" autocomplete="new-password">
+    <input type="password" id="confirmaSenha" placeholder="Confirme a nova senha" autocomplete="new-password">
+    <button type="button" id="btn-trocar-senha">Salvar nova senha</button>
+    <div id="trocaSenhaErro" class="login-erro"></div>
+  </div>
+</div>
+
 <div id="app-conteudo">
   <div class="tela">
     <div class="cards">
@@ -178,15 +191,77 @@
   };
   if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
   const auth = firebase.auth();
+  const db = firebase.firestore();
 
   let statusAuth = 'carregando'; // 'carregando' | 'logado' | 'deslogado'
   let destinoPendente = null;
+
+  // Verifica se esta pessoa já trocou a senha temporária ao menos uma vez.
+  // Enquanto não trocar, ela fica travada nessa tela — mesmo sabendo a senha
+  // provisória, não consegue seguir sem escolher uma senha só dela.
+  async function posLogin(user, destino){
+    try{
+      const ref = db.collection('usuarios').doc(user.uid);
+      const snap = await ref.get();
+      const jaTrocou = snap.exists && snap.data().senhaTrocada === true;
+      if (jaTrocou){
+        if (destino) window.location.href = destino;
+      } else {
+        mostrarTelaTrocaSenha(destino);
+      }
+    }catch(e){
+      // sem internet pra checar o Firestore agora: deixa passar pra não travar o acesso
+      if (destino) window.location.href = destino;
+    }
+  }
+
+  function mostrarTelaTrocaSenha(destino){
+    document.getElementById('tela-login').style.display = 'none';
+    document.getElementById('tela-troca-senha').style.display = 'flex';
+    window.__destinoAposTroca = destino;
+  }
+
+  document.getElementById('btn-trocar-senha').addEventListener('click', () => {
+    const novaSenha = document.getElementById('novaSenha').value;
+    const confirmaSenha = document.getElementById('confirmaSenha').value;
+    const erroEl = document.getElementById('trocaSenhaErro');
+    const btn = document.getElementById('btn-trocar-senha');
+    erroEl.textContent = '';
+    if (novaSenha.length < 6){
+      erroEl.textContent = 'A senha precisa ter pelo menos 6 caracteres.';
+      return;
+    }
+    if (novaSenha !== confirmaSenha){
+      erroEl.textContent = 'As senhas não coincidem.';
+      return;
+    }
+    btn.disabled = true;
+    btn.textContent = 'Salvando…';
+    const user = auth.currentUser;
+    user.updatePassword(novaSenha).then(() => {
+      return db.collection('usuarios').doc(user.uid).set({ senhaTrocada: true, email: user.email }, { merge: true });
+    }).then(() => {
+      document.getElementById('tela-troca-senha').style.display = 'none';
+      const destino = window.__destinoAposTroca;
+      if (destino) window.location.href = destino;
+      else document.getElementById('app-conteudo').style.display = 'block';
+    }).catch(err => {
+      if (err.code === 'auth/requires-recent-login'){
+        erroEl.textContent = 'Por segurança, saia e entre de novo antes de trocar a senha.';
+      } else {
+        erroEl.textContent = 'Erro ao salvar a nova senha. Tente novamente.';
+      }
+    }).finally(() => {
+      btn.disabled = false;
+      btn.textContent = 'Salvar nova senha';
+    });
+  });
 
   auth.onAuthStateChanged(user => {
     statusAuth = user ? 'logado' : 'deslogado';
     if (destinoPendente) {
       if (statusAuth === 'logado') {
-        window.location.href = destinoPendente;
+        posLogin(user, destinoPendente);
       } else {
         document.getElementById('tela-login').style.display = 'flex';
       }
@@ -198,7 +273,7 @@
       e.preventDefault();
       const destino = card.getAttribute('href');
       if (statusAuth === 'logado'){
-        window.location.href = destino;
+        posLogin(auth.currentUser, destino);
       } else if (statusAuth === 'deslogado'){
         destinoPendente = destino;
         document.getElementById('tela-login').style.display = 'flex';
@@ -217,8 +292,8 @@
     erroEl.textContent = '';
     btn.disabled = true;
     btn.textContent = 'Entrando…';
-    auth.signInWithEmailAndPassword(email, senha).then(() => {
-      if (destinoPendente) window.location.href = destinoPendente;
+    auth.signInWithEmailAndPassword(email, senha).then(cred => {
+      return posLogin(cred.user, destinoPendente);
     }).catch(() => {
       erroEl.textContent = 'E-mail ou senha incorretos.';
     }).finally(() => {
