@@ -600,11 +600,10 @@
   <section class="pagina" data-pagina="lancamentos">
 
   <div class="aviso">
-    <span class="icone">💾</span>
+    <span class="icone">☁️</span>
     <div>
-      <strong>Seus lançamentos são salvos automaticamente neste navegador</strong> — não precisa mais exportar backup toda vez.
-      Ainda assim, se você limpar os dados do navegador ou trocar de computador, esse salvamento se perde, então vale exportar um backup de vez em quando com os botões abaixo da tabela.
-      Se estiver vendo esta página dentro do Claude, abra o arquivo baixado direto no seu navegador para o salvamento automático funcionar.
+      <strong>Seus lançamentos são salvos automaticamente na nuvem</strong> — abra em qualquer computador ou celular, logando com o mesmo usuário, que os dados estarão lá.
+      Uma cópia também fica guardada neste navegador, então o sistema continua funcionando mesmo se a internet cair por um instante.
     </div>
   </div>
 
@@ -848,7 +847,7 @@
       </div>
       <div id="vazio" class="vazio" style="display:none;">Nenhum frete cadastrado ainda. Use o formulário acima para começar.</div>
       <div class="rodape-acoes">
-        <button class="btn-icone" id="btn-limpar-dados" title="Apagar todos os dados salvos neste navegador">🗑 Limpar tudo</button>
+        <button class="btn-icone" id="btn-limpar-dados" title="Apagar todos os dados salvos (navegador e nuvem)">🗑 Limpar tudo</button>
         <button class="btn btn-secundario" id="btn-importar">Importar backup</button>
         <input type="file" id="input-importar" accept="application/json" style="display:none;">
         <button class="btn btn-secundario" id="btn-exportar-csv">Exportar CSV</button>
@@ -2406,7 +2405,7 @@ const AlmaNuvem = (function(){
   document.getElementById('f-data').value = new Date().toISOString().slice(0,10);
 
   document.getElementById('btn-limpar-dados').addEventListener('click', () => {
-    if (!confirm('Isso vai apagar todos os fretes E clientes salvos neste navegador. Se quiser manter os dados, exporte um backup antes. Continuar?')) return;
+    if (!confirm('Isso vai apagar todos os fretes E clientes salvos — inclusive na nuvem. Se quiser manter os dados, exporte um backup antes. Continuar?')) return;
     fretes = [];
     contador = 1;
     clientes = [];
