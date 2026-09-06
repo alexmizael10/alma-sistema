@@ -7,6 +7,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
 <style>
   :root{
     --ink: #1e293b;
@@ -129,10 +131,47 @@
   @media (max-width: 760px){
     .cards{ grid-template-columns: 1fr; }
   }
+
+  /* ---------- Tela de login ---------- */
+  .tela-login{
+    position: fixed; inset: 0; background: #1e293b;
+    display:flex; align-items:center; justify-content:center; padding: 20px; z-index: 2000;
+  }
+  .login-card{
+    background: #fff; border-radius: 12px; padding: 36px 30px;
+    max-width: 360px; width: 100%; text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,.35);
+  }
+  .login-logo{ font-size: 34px; margin-bottom: 6px; }
+  .login-card h2{ font-family:'Oswald', sans-serif; font-size: 19px; margin: 0 0 6px; color: var(--ink); }
+  .login-card p{ font-size: 12.5px; color: var(--ink-soft); margin: 0 0 18px; }
+  .login-card input{
+    width: 100%; box-sizing: border-box; border: 1px solid var(--line); border-radius: 6px;
+    padding: 10px 12px; font-size: 14px; margin-bottom: 10px; font-family: inherit;
+  }
+  .login-card button{
+    width: 100%; border: none; border-radius: 6px; background: #1e40af; color: #fff;
+    font-weight: 600; font-size: 14px; padding: 11px; cursor: pointer;
+  }
+  .login-card button:hover{ background: #1c3a94; }
+  .login-card button:disabled{ background: #94a3b8; cursor: not-allowed; }
+  .login-erro{ color: #dc2626; font-size: 12.5px; margin-top: 10px; min-height: 16px; }
 </style>
 </head>
 <body>
 
+<div id="tela-login" class="tela-login">
+  <div class="login-card">
+    <div class="login-logo">🔒</div>
+    <h2>ALMA</h2>
+    <p>Entre com seu e-mail e senha para acessar os sistemas.</p>
+    <input type="email" id="loginEmail" placeholder="E-mail" autocomplete="username">
+    <input type="password" id="loginSenha" placeholder="Senha" autocomplete="current-password">
+    <button type="button" id="btn-login">Entrar</button>
+    <div id="loginErro" class="login-erro"></div>
+  </div>
+</div>
+
+<div id="app-conteudo" style="display:none;">
   <a href="index.html" class="voltar-menu">← Menu ALMA</a>
 
   <div class="tela">
@@ -159,6 +198,42 @@
       </a>
     </div>
   </div>
+</div>
 
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyAkTfgLDLIe7q7n3Pzix_50Sz-hMiyAlkU",
+    authDomain: "sistema-alma-tratores.firebaseapp.com",
+    projectId: "sistema-alma-tratores",
+    storageBucket: "sistema-alma-tratores.firebasestorage.app",
+    messagingSenderId: "904624946557",
+    appId: "1:904624946557:web:87ba09360ffbd187156014"
+  };
+  if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+
+  function fazerLoginApp(){
+    const email = document.getElementById('loginEmail').value.trim();
+    const senha = document.getElementById('loginSenha').value;
+    const erroEl = document.getElementById('loginErro');
+    const btn = document.getElementById('btn-login');
+    erroEl.textContent = '';
+    btn.disabled = true;
+    btn.textContent = 'Entrando…';
+    auth.signInWithEmailAndPassword(email, senha).catch(() => {
+      erroEl.textContent = 'E-mail ou senha incorretos.';
+    }).finally(() => {
+      btn.disabled = false;
+      btn.textContent = 'Entrar';
+    });
+  }
+  document.getElementById('btn-login').addEventListener('click', fazerLoginApp);
+  document.getElementById('loginSenha').addEventListener('keydown', e => { if (e.key === 'Enter') fazerLoginApp(); });
+
+  auth.onAuthStateChanged(user => {
+    document.getElementById('tela-login').style.display = user ? 'none' : 'flex';
+    document.getElementById('app-conteudo').style.display = user ? 'block' : 'none';
+  });
+</script>
 </body>
 </html>
