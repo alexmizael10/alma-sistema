@@ -1009,6 +1009,17 @@ const AlmaNuvem = (function(){
     login(email, senha){ return auth.signInWithEmailAndPassword(email, senha); },
     logout(){ return auth.signOut(); },
     aoMudarLogin(cb){ auth.onAuthStateChanged(cb); },
+    registrar(sistema, tipo, acao, registroId, resumo){
+      try{
+        db.collection('auditoria').add({
+          usuario: (auth.currentUser && auth.currentUser.email) || 'desconhecido',
+          sistema, tipo, acao,
+          registroId: String(registroId ?? ''),
+          resumo: resumo || '',
+          quando: firebase.firestore.FieldValue.serverTimestamp(),
+        }).catch(() => {});
+      }catch(e){}
+    },
   };
 })();
 
@@ -1904,6 +1915,7 @@ const AlmaNuvem = (function(){
       && previewDestinoTexto === f.destino;
 
     fretes.push(f);
+    AlmaNuvem.registrar('fretes', 'frete', 'criar', f.id, `${f.origem} → ${f.destino}`);
     e.target.reset();
     document.getElementById('f-valorpago').value = '';
     document.getElementById('f-vencimento').value = '';
@@ -1935,6 +1947,7 @@ const AlmaNuvem = (function(){
     const f = fretes.find(x => x.id === id);
     if(!f) return;
     if (btn.dataset.acao === 'remover'){
+      AlmaNuvem.registrar('fretes', 'frete', 'excluir', id, `${f.origem} → ${f.destino}`);
       fretes = fretes.filter(x => x.id !== id);
       render();
     } else if (btn.dataset.acao === 'recalcular'){
@@ -2044,9 +2057,14 @@ const AlmaNuvem = (function(){
 
     if (clienteEditandoId){
       const c = clienteById(clienteEditandoId);
-      if (c) Object.assign(c, dados);
+      if (c){
+        Object.assign(c, dados);
+        AlmaNuvem.registrar('fretes', 'cliente', 'editar', c.id, c.nome);
+      }
     } else {
-      clientes.push({ id: contadorCliente++, ...dados });
+      const novoId = contadorCliente++;
+      clientes.push({ id: novoId, ...dados });
+      AlmaNuvem.registrar('fretes', 'cliente', 'criar', novoId, dados.nome);
     }
     limparFormCliente();
     render();
@@ -2081,6 +2099,7 @@ const AlmaNuvem = (function(){
         ? `Este cliente tem ${vinculados} frete(s) lançado(s). Os fretes serão mantidos, mas aparecerão como "cliente removido". Continuar?`
         : 'Remover este cliente?';
       if (!confirm(aviso)) return;
+      AlmaNuvem.registrar('fretes', 'cliente', 'excluir', id, c.nome);
       clientes = clientes.filter(x => x.id !== id);
       if (clienteEditandoId === id) limparFormCliente();
       render();
@@ -2160,6 +2179,7 @@ const AlmaNuvem = (function(){
     if (autorizadoAgora && !f.numero){
       f.numero = gerarNumeroOficial();
     }
+    AlmaNuvem.registrar('fretes', 'frete', 'editar', f.id, `${f.origem} → ${f.destino}`);
 
     fecharModalFrete();
 

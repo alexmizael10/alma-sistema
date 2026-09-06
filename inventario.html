@@ -196,6 +196,17 @@ const AlmaNuvem = (function(){
     login(email, senha){ return auth.signInWithEmailAndPassword(email, senha); },
     logout(){ return auth.signOut(); },
     aoMudarLogin(cb){ auth.onAuthStateChanged(cb); },
+    registrar(sistema, tipo, acao, registroId, resumo){
+      try{
+        db.collection('auditoria').add({
+          usuario: (auth.currentUser && auth.currentUser.email) || 'desconhecido',
+          sistema, tipo, acao,
+          registroId: String(registroId ?? ''),
+          resumo: resumo || '',
+          quando: firebase.firestore.FieldValue.serverTimestamp(),
+        }).catch(() => {});
+      }catch(e){}
+    },
   };
 })();
 
@@ -250,9 +261,14 @@ const AlmaNuvem = (function(){
         };
         if (maquinaEditandoId) {
             const m = maquinas.find(x => x.id === maquinaEditandoId);
-            if (m) Object.assign(m, dados);
+            if (m) {
+                Object.assign(m, dados);
+                AlmaNuvem.registrar('inventario', 'maquina', 'editar', m.id, `${dados.marca} ${dados.modelo}`);
+            }
         } else {
-            maquinas.push({ id: contadorMaquina++, ...dados });
+            const novoId = contadorMaquina++;
+            maquinas.push({ id: novoId, ...dados });
+            AlmaNuvem.registrar('inventario', 'maquina', 'criar', novoId, `${dados.marca} ${dados.modelo}`);
         }
         salvarMaquinasLocal();
         limparFormMaquina();
@@ -280,6 +296,8 @@ const AlmaNuvem = (function(){
 
     function excluirMaquina(id) {
         if (!confirm('Remover esta máquina do inventário?')) return;
+        const m = maquinas.find(x => x.id === id);
+        AlmaNuvem.registrar('inventario', 'maquina', 'excluir', id, m ? `${m.marca} ${m.modelo}` : '');
         maquinas = maquinas.filter(x => x.id !== id);
         if (maquinaEditandoId === id) limparFormMaquina();
         salvarMaquinasLocal();

@@ -378,6 +378,17 @@ const AlmaNuvem = (function(){
     login(email, senha){ return auth.signInWithEmailAndPassword(email, senha); },
     logout(){ return auth.signOut(); },
     aoMudarLogin(cb){ auth.onAuthStateChanged(cb); },
+    registrar(sistema, tipo, acao, registroId, resumo){
+      try{
+        db.collection('auditoria').add({
+          usuario: (auth.currentUser && auth.currentUser.email) || 'desconhecido',
+          sistema, tipo, acao,
+          registroId: String(registroId ?? ''),
+          resumo: resumo || '',
+          quando: firebase.firestore.FieldValue.serverTimestamp(),
+        }).catch(() => {});
+      }catch(e){}
+    },
   };
 })();
 
@@ -487,9 +498,14 @@ const AlmaNuvem = (function(){
         };
         if (clienteEditandoIdOS) {
             const c = clientesOS.find(x => x.id === clienteEditandoIdOS);
-            if (c) Object.assign(c, dados);
+            if (c) {
+                Object.assign(c, dados);
+                AlmaNuvem.registrar('os', 'cliente', 'editar', c.id, c.nome);
+            }
         } else {
-            clientesOS.push({ id: contadorClienteOS++, ...dados });
+            const novoId = contadorClienteOS++;
+            clientesOS.push({ id: novoId, ...dados });
+            AlmaNuvem.registrar('os', 'cliente', 'criar', novoId, dados.nome);
         }
         salvarClientesOSLocal();
         limparFormClienteOS();
@@ -515,6 +531,8 @@ const AlmaNuvem = (function(){
 
     function excluirClienteOS(id) {
         if (!confirm('Remover este cliente do cadastro?')) return;
+        const c = clientesOS.find(x => x.id === id);
+        AlmaNuvem.registrar('os', 'cliente', 'excluir', id, c ? c.nome : '');
         clientesOS = clientesOS.filter(x => x.id !== id);
         if (clienteEditandoIdOS === id) limparFormClienteOS();
         salvarClientesOSLocal();
@@ -735,6 +753,7 @@ const AlmaNuvem = (function(){
             return;
         }
         let os;
+        let eraNova = false;
         if (osEditandoId) {
             os = ordens.find(o => o.id === osEditandoId);
             if (!os) { osEditandoId = null; }
@@ -743,6 +762,7 @@ const AlmaNuvem = (function(){
             os = { id: Date.now(), numero: null };
             ordens.push(os);
             osEditandoId = os.id;
+            eraNova = true;
         }
         Object.assign(os, dados);
         if (dados.autorizado && !os.numero) {
@@ -750,6 +770,7 @@ const AlmaNuvem = (function(){
             os.numero = atual.toString().padStart(4, '0');
             contadorOS = atual + 1;
         }
+        AlmaNuvem.registrar('os', 'ordem', eraNova ? 'criar' : 'editar', os.id, dados.clienteNome);
         salvarOrdensLocal();
         atualizarExibicaoNumero();
         renderResumoOS();
@@ -776,6 +797,8 @@ const AlmaNuvem = (function(){
 
     function excluirOS(id) {
         if (!confirm('Excluir esta OS salva? Essa ação não pode ser desfeita.')) return;
+        const os = ordens.find(o => o.id === id);
+        AlmaNuvem.registrar('os', 'ordem', 'excluir', id, os ? os.clienteNome : '');
         ordens = ordens.filter(o => o.id !== id);
         if (osEditandoId === id) novaOS();
         salvarOrdensLocal();

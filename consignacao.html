@@ -260,6 +260,17 @@ const AlmaNuvem = (function(){
     login(email, senha){ return auth.signInWithEmailAndPassword(email, senha); },
     logout(){ return auth.signOut(); },
     aoMudarLogin(cb){ auth.onAuthStateChanged(cb); },
+    registrar(sistema, tipo, acao, registroId, resumo){
+      try{
+        db.collection('auditoria').add({
+          usuario: (auth.currentUser && auth.currentUser.email) || 'desconhecido',
+          sistema, tipo, acao,
+          registroId: String(registroId ?? ''),
+          resumo: resumo || '',
+          quando: firebase.firestore.FieldValue.serverTimestamp(),
+        }).catch(() => {});
+      }catch(e){}
+    },
   };
 })();
 
@@ -503,6 +514,7 @@ const AlmaNuvem = (function(){
         if (!dados.consignanteNome) { alert('Preencha ao menos o nome do consignante.'); return; }
         if (!dados.marca && !dados.modelo) { alert('Preencha ao menos marca ou modelo da máquina.'); return; }
         let c;
+        let eraNovo = false;
         if (contratoEditandoId) {
             c = contratos.find(x => x.id === contratoEditandoId);
         }
@@ -510,6 +522,7 @@ const AlmaNuvem = (function(){
             c = { id: Date.now(), numero: null };
             contratos.push(c);
             contratoEditandoId = c.id;
+            eraNovo = true;
         }
         Object.assign(c, dados);
         if (!c.numero) {
@@ -517,6 +530,7 @@ const AlmaNuvem = (function(){
             c.numero = 'CONS-' + String(atual).padStart(4, '0');
             contadorContrato = atual + 1;
         }
+        AlmaNuvem.registrar('consignacao', 'contrato', eraNovo ? 'criar' : 'editar', c.id, dados.consignanteNome);
         salvarConsignatarioPadrao();
         salvarContratosLocal();
         document.getElementById('numeroContrato').textContent = c.numero;
@@ -534,6 +548,8 @@ const AlmaNuvem = (function(){
 
     function excluirContrato(id) {
         if (!confirm('Excluir este contrato salvo? Essa ação não pode ser desfeita.')) return;
+        const c = contratos.find(x => x.id === id);
+        AlmaNuvem.registrar('consignacao', 'contrato', 'excluir', id, c ? c.consignanteNome : '');
         contratos = contratos.filter(x => x.id !== id);
         if (contratoEditandoId === id) contratoEditandoId = null;
         salvarContratosLocal();
