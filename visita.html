@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Orçamento - Visita Técnica - ALMA TRATORES</title>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+<style>
+    :root { --primary: #1e293b; --secondary: #64748b; --accent: #1e40af; --bg: #ffffff; }
+
+    body {
+        font-family: 'Segoe UI', Arial, sans-serif;
+        color: #334155;
+        margin: 0;
+        padding: 20px;
+        background-color: #EEF1F6;
+        background-image:
+            linear-gradient(rgba(30,64,175,0.055) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(30,64,175,0.055) 1px, transparent 1px);
+        background-size: 28px 28px;
+    }
+
+    .voltar-menu {
+        display: inline-flex; align-items: center; gap: 6px;
+        max-width: 900px; margin: 0 auto 12px; padding: 0 4px;
+        font-size: 0.8rem; color: var(--secondary); text-decoration: none;
+    }
+    .voltar-menu:hover { color: var(--accent); }
+
+    .container {
+        max-width: 900px;
+        background: white;
+        padding: 50px;
+        border-radius: 4px;
+        box-shadow: 0 0 20px rgba(0,0,0,0.05);
+        margin: 0 auto 24px;
+    }
+    .resumo-container { min-height: auto; }
+
+    /* ---------- Timbre (igual ao da OS) ---------- */
+    .header-section { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px solid #e2e8f0; padding-bottom: 20px; margin-bottom: 30px; }
+    .company-info { width: 60%; }
+    .logo-box { width: 250px; margin-bottom: 15px; display: flex; align-items: center; justify-content: flex-start; }
+    .logo-box img { max-width: 100%; max-height: 100px; object-fit: contain; }
+    .details-empresa { font-size: 0.75rem; line-height: 1.4; color: #475569; }
+    .details-empresa strong { color: var(--primary); display: block; font-size: 0.9rem; margin-bottom: 2px; }
+    .title-area { text-align: right; width: 40%; }
+    .title-area h1 { font-size: 1.3rem; color: var(--primary); margin: 0; letter-spacing: -0.5px; }
+    .vt-number { font-size: 1.4rem; color: var(--accent); font-weight: bold; margin: 5px 0; }
+    .data-vt { font-size: 0.8rem; font-weight: bold; color: var(--secondary); text-transform: uppercase; }
+
+    h3 { color: var(--primary); font-size: 1rem; border-bottom: 2px solid #f1f5f9; padding-bottom: 8px; margin-top: 34px; }
+    .clausula-fixa { font-size: 0.78rem; color: var(--secondary); font-style: italic; margin: -8px 0 14px; }
+
+    .grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; margin-bottom: 15px; }
+    .field-group { display: flex; flex-direction: column; }
+    label { font-size: 0.7rem; font-weight: 700; color: var(--secondary); text-transform: uppercase; margin-bottom: 4px; }
+    input, select, textarea { border: 1px solid #e2e8f0; padding: 8px; font-size: 0.9rem; color: #1e293b; border-radius: 2px; width: 100%; box-sizing: border-box; font-family: inherit; }
+    input[readonly] { background: #f8fafc; color: var(--primary); font-weight: 700; }
+    textarea { resize: vertical; }
+
+    .total-container { background: var(--primary); color: white; padding: 18px 24px; border-radius: 6px; text-align: right; margin-top: 26px; }
+    .total-value { font-size: 1.7rem; font-weight: bold; }
+    .autorizo-linha { font-size: 0.85rem; margin-top: 24px; padding: 14px; border: 1px dashed #cbd5e1; border-radius: 4px; background: #f8fafc; }
+    .assinatura-box { margin-top: 50px; border-top: 1px solid #334155; padding-top: 8px; width: 60%; text-align: center; font-size: 0.8rem; color: var(--secondary); }
+
+    table { width: 100%; border-collapse: collapse; margin-top: 5px; }
+    th { background: #f8fafc; text-align: left; padding: 10px; font-size: 0.7rem; color: #475569; border: 1px solid #e2e8f0; text-transform: uppercase; }
+    td { border: 1px solid #e2e8f0; padding: 10px; font-size: 0.85rem; }
+
+    .tabs-nav-os { max-width: 900px; margin: 0 auto 16px; display: flex; gap: 4px; border-bottom: 1px solid #cbd5e1; background: rgba(255,255,255,.88); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); border-radius: 10px 10px 0 0; padding: 4px 10px 0; }
+    .tab-btn-os { border: none; background: transparent; font-family: 'Segoe UI', Arial, sans-serif; font-size: 0.85rem; font-weight: 700; color: var(--secondary); padding: 10px 16px; cursor: pointer; border-bottom: 3px solid transparent; margin-bottom: -1px; }
+    .tab-btn-os:hover { color: var(--primary); }
+    .tab-btn-os.ativa { color: var(--accent); border-bottom-color: var(--accent); }
+    .pagina-vt { display: none; }
+    .pagina-vt.ativa { display: block; }
+
+    .acoes-vt { display: flex; gap: 10px; margin-top: 34px; }
+    .btn-secundario-os { background: #f1f5f9; color: var(--primary); border: 1px solid #e2e8f0; padding: 15px 20px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 0.9rem; }
+    .btn-secundario-os:hover { background: #e2e8f0; }
+    .btn-imprimir { background: var(--accent); color: white; padding: 15px; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 1rem; flex: 1; }
+    .btn-acao-resumo { color: var(--accent); background: none; border: none; cursor: pointer; font-size: 1rem; }
+    .btn-remove { color: #f87171; background: none; border: none; cursor: pointer; font-size: 1.2rem; }
+
+    /* ---------- Tela de login ---------- */
+    .tela-login{
+        position: fixed; inset: 0; background: var(--primary);
+        display:flex; align-items:center; justify-content:center; padding: 20px; z-index: 2000;
+    }
+    .login-card{
+        background: #fff; border-radius: 8px; padding: 36px 30px;
+        max-width: 360px; width: 100%; text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,.35);
+    }
+    .login-logo{ font-size: 34px; margin-bottom: 6px; }
+    .login-card h2{ font-size: 19px; margin: 0 0 6px; color: var(--primary); }
+    .login-card p{ font-size: 12.5px; color: var(--secondary); margin: 0 0 18px; }
+    .login-card input{
+        width: 100%; box-sizing: border-box; border: 1px solid #e2e8f0; border-radius: 4px;
+        padding: 10px 12px; font-size: 14px; margin-bottom: 10px; font-family: inherit;
+    }
+    .login-card button{
+        width: 100%; border: none; border-radius: 4px; background: var(--accent); color: #fff;
+        font-weight: 700; font-size: 14px; padding: 11px; cursor: pointer;
+    }
+    .login-card button:hover{ background: #1c3a94; }
+    .login-erro{ color: #dc2626; font-size: 12.5px; margin-top: 10px; min-height: 16px; }
+
+    @media print {
+        .no-print-btn, .tabs-nav-os, .acoes-vt, .voltar-menu, .tela-login { display: none !important; }
+        .pagina-vt { display: none !important; }
+        .pagina-vt[data-pagina="novo"] { display: block !important; }
+        body { background: white; background-image: none; padding: 0; }
+        .container { box-shadow: none; border: none; padding: 0; max-width: 100%; }
+        .total-container { background: #1e293b !important; color: white !important; -webkit-print-color-adjust: exact; }
+    }
+
+    @media (max-width: 760px){ .grid{ grid-template-columns: 1fr 1fr; } }
+</style>
+</head>
+<body>
+
+<div id="tela-login" class="tela-login" style="display:none;">
+  <div class="login-card">
+    <div class="login-logo">🚐</div>
+    <h2>ALMA TRATORES</h2>
+    <p>Entre com seu e-mail e senha para acessar os dados na nuvem.</p>
+    <input type="email" id="loginEmail" placeholder="E-mail" autocomplete="username">
+    <input type="password" id="loginSenha" placeholder="Senha" autocomplete="current-password">
+    <button type="button" id="btn-login">Entrar</button>
+    <div id="loginErro" class="login-erro"></div>
+  </div>
+</div>
+
+<div id="app-conteudo" style="display:none;">
+
+<div style="max-width:900px; margin:0 auto; display:flex; justify-content:space-between; align-items:center;">
+    <a href="tratores.html" class="voltar-menu" style="margin:0;">← Menu ALMA TRATORES</a>
+    <div style="display:flex; align-items:center; gap:12px;" class="no-print-btn">
+        <span id="cloud-status" style="font-size:12px; color:var(--secondary);"></span>
+        <button type="button" id="btn-logout" style="background:transparent; border:1px solid #cbd5e1; color:var(--secondary); font-size:12px; padding:4px 10px; border-radius:4px; cursor:pointer;">Sair</button>
+    </div>
+</div>
+
+<nav class="tabs-nav-os" id="tabs-nav-vt">
+    <button class="tab-btn-os ativa" data-pagina="novo">📝 Novo Orçamento</button>
+    <button class="tab-btn-os" data-pagina="lista">📑 Orçamentos</button>
+</nav>
+
+<section class="pagina-vt ativa" data-pagina="novo">
+<div class="container">
+
+    <div class="header-section">
+        <div class="company-info">
+            <div class="logo-box">
+                <img src="data:image/png;base64,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" alt="ALMA TRATORES">
+            </div>
+            <div class="details-empresa">
+                <strong>ALMA TRATORES LTDA.</strong>
+                CNPJ: 40.976.380/0001-19<br>
+                Rua Ana Maura Rocha, SN, Qd. 01, Lts. 02/03/04, Vila Mariana<br>
+                Rio Verde - GO, CEP: 75.906-600<br>
+                Telefone: (64) 99987-1001
+            </div>
+        </div>
+        <div class="title-area">
+            <h1>ORÇAMENTO<br>VISITA TÉCNICA</h1>
+            <div class="vt-number">Nº <span id="numeroVT">—</span></div>
+            <div class="data-vt">DATA: <input type="date" id="vtDataOrcamento" style="width: 140px; border:none; background:transparent; font-weight: bold; text-align: right; padding:0;"></div>
+        </div>
+    </div>
+
+    <h3>Dados do Cliente</h3>
+    <div class="grid">
+        <div class="field-group" style="grid-column: span 3;">
+            <label>Cliente cadastrado</label>
+            <select id="vtClienteSelect" onchange="preencherClienteSelecionado()">
+                <option value="">— Selecionar cliente cadastrado (opcional) —</option>
+            </select>
+        </div>
+        <div class="field-group" style="grid-column: span 2;"><label>Cliente</label><input type="text" id="vtClienteNome"></div>
+        <div class="field-group"><label>Telefone</label><input type="text" id="vtClienteTelefone"></div>
+        <div class="field-group"><label>CPF</label><input type="text" id="vtClienteCpf"></div>
+    </div>
+
+    <h3>Dados da Visita</h3>
+    <div class="grid">
+        <div class="field-group"><label>Responsável</label><input type="text" id="vtResponsavel" value="Aguilar Leão Mota"></div>
+        <div class="field-group"><label>Local da visita</label><input type="text" id="vtLocalVisita"></div>
+        <div class="field-group"><label>Data prevista da visita</label><input type="date" id="vtDataVisita"></div>
+        <div class="field-group"><label>Origem</label><input type="text" id="vtOrigem" value="Rio Verde - GO"></div>
+        <div class="field-group" style="grid-column: span 2;"><label>Descrição do serviço</label>
+            <textarea id="vtDescricao" rows="2">Visita técnica e demonstração de implemento agrícola, incluindo apresentação da máquina, esclarecimento de dúvidas e avaliação local.</textarea>
+        </div>
+    </div>
+
+    <h3>1. Deslocamento</h3>
+    <div class="grid">
+        <div class="field-group"><label>Distância estimada (ida e volta) — km</label><input type="number" min="0" id="vtDistancia" oninput="calcularVT()"></div>
+        <div class="field-group"><label>Valor por km (R$)</label><input type="number" min="0" step="0.01" id="vtValorKm" value="2.00" oninput="calcularVT()"></div>
+        <div class="field-group"><label>Subtotal deslocamento</label><input type="text" id="vtSubtotalDeslocamento" readonly value="R$ 0,00"></div>
+    </div>
+
+    <h3>2. Diária Técnica</h3>
+    <div class="clausula-fixa">Cobrada somente se a visita não resultar em negócio fechado. Se o negócio for fechado, cobra-se o percentual abaixo sobre o valor da negociação, em vez da diária.</div>
+    <div class="grid">
+        <div class="field-group"><label>Valor da diária (R$)</label><input type="number" min="0" step="0.01" id="vtValorDiaria" value="500.00" oninput="calcularVT()"></div>
+        <div class="field-group"><label>Quantidade de dias</label><input type="number" min="0" step="1" id="vtQtdDias" value="1" oninput="calcularVT()"></div>
+        <div class="field-group"><label>Subtotal diárias</label><input type="text" id="vtSubtotalDiarias" readonly value="R$ 0,00"></div>
+        <div class="field-group"><label>Se fechar negócio, cobra (%) sobre a negociação</label><input type="number" min="0" step="0.1" id="vtPercentualFechamento" value="4"></div>
+    </div>
+
+    <h3>3. Despesas Adicionais</h3>
+    <div class="grid">
+        <div class="field-group" style="grid-column: span 2;"><label>Descrição (se houver)</label><input type="text" id="vtDespesasDescricao" placeholder="Ex: pedágio, hospedagem... (deixe em branco se não houver)"></div>
+        <div class="field-group"><label>Valor despesas (R$)</label><input type="number" min="0" step="0.01" id="vtDespesasValor" value="0" oninput="calcularVT()"></div>
+    </div>
+
+    <div class="total-container">
+        <span style="font-size: 0.7rem; text-transform: uppercase; opacity: 0.8;">Valor Total da Visita</span>
+        <div class="total-value" id="vtTotalGeral">R$ 0,00</div>
+    </div>
+
+    <h3>Condições</h3>
+    <div class="grid">
+        <div class="field-group"><label>Entrada na autorização (%)</label><input type="number" min="0" max="100" id="vtPercEntrada" value="50"></div>
+        <div class="field-group"><label>Restante na finalização (%)</label><input type="number" min="0" max="100" id="vtPercFinal" value="50"></div>
+        <div class="field-group"><label>Validade do orçamento (dias)</label><input type="number" min="1" id="vtValidadeDias" value="7"></div>
+    </div>
+    <div class="clausula-fixa" style="margin-top:8px;">O cliente declara ciência e concordância com os valores acima.</div>
+
+    <div class="autorizo-linha" id="vtAutorizoTexto">
+        "Autorizo a visita técnica no valor de R$ 0,00."
+    </div>
+    <div class="assinatura-box">Assinatura do Cliente</div>
+
+    <div class="acoes-vt no-print-btn">
+        <button type="button" class="btn-secundario-os" onclick="novoOrcamentoVT()">🆕 Novo</button>
+        <button type="button" class="btn-secundario-os" onclick="salvarOrcamentoVT()">💾 Salvar</button>
+        <button type="button" class="btn-imprimir" onclick="imprimirOrcamentoVT()">🖨️ Gerar / Imprimir PDF</button>
+    </div>
+</div>
+</section>
+
+<section class="pagina-vt" data-pagina="lista">
+<div class="container resumo-container">
+    <h1 style="margin-bottom: 20px; color: var(--primary); font-size: 1.5rem;">Orçamentos de Visita Técnica</h1>
+    <table>
+        <thead>
+            <tr><th>Nº</th><th>Cliente</th><th>Local</th><th>Data da visita</th><th>Total</th><th style="width:100px;"></th></tr>
+        </thead>
+        <tbody id="tbodyOrcamentosVT"></tbody>
+    </table>
+    <div id="vazioOrcamentosVT" style="display:none; text-align:center; color:var(--secondary); padding:30px;">Nenhum orçamento salvo ainda.</div>
+</div>
+</section>
+
+</div>
+
+<script>
+// ---------- Conexão com a nuvem (Firebase) — compartilhado entre os sistemas ALMA ----------
+const AlmaNuvem = (function(){
+  const firebaseConfig = {
+    apiKey: "AIzaSyAkTfgLDLIe7q7n3Pzix_50Sz-hMiyAlkU",
+    authDomain: "sistema-alma-tratores.firebaseapp.com",
+    projectId: "sistema-alma-tratores",
+    storageBucket: "sistema-alma-tratores.firebasestorage.app",
+    messagingSenderId: "904624946557",
+    appId: "1:904624946557:web:87ba09360ffbd187156014"
+  };
+  if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const db = firebase.firestore();
+  const colecao = db.collection('alma_data');
+  const timers = {};
+
+  function setStatus(texto, cor){
+    const el = document.getElementById('cloud-status');
+    if (el){ el.textContent = texto; el.style.color = cor || 'var(--secondary)'; }
+  }
+
+  return {
+    async carregar(docId){
+      try{
+        const snap = await colecao.doc(docId).get();
+        return snap.exists ? snap.data() : null;
+      }catch(e){
+        setStatus('Sem conexão com a nuvem', '#f59e0b');
+        return null;
+      }
+    },
+    salvar(docId, dados){
+      clearTimeout(timers[docId]);
+      setStatus('Salvando…');
+      timers[docId] = setTimeout(() => {
+        colecao.doc(docId).set(dados)
+          .then(() => setStatus('Salvo na nuvem ✓', '#16a34a'))
+          .catch(() => setStatus('Erro ao salvar — verifique a internet', '#dc2626'));
+      }, 800);
+    },
+    login(email, senha){ return auth.signInWithEmailAndPassword(email, senha); },
+    logout(){ return auth.signOut(); },
+    aoMudarLogin(cb){ auth.onAuthStateChanged(cb); },
+    registrar(sistema, tipo, acao, registroId, resumo){
+      try{
+        db.collection('auditoria').add({
+          usuario: (auth.currentUser && auth.currentUser.email) || 'desconhecido',
+          sistema, tipo, acao,
+          registroId: String(registroId ?? ''),
+          resumo: resumo || '',
+          quando: firebase.firestore.FieldValue.serverTimestamp(),
+        }).catch(() => {});
+      }catch(e){}
+    },
+  };
+})();
+
+const dbClientes = firebase.firestore();
+
+function escapeAttrVT(s) {
+    return String(s ?? '').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
+}
+function fmtMoedaVT(v) {
+    return 'R$ ' + (parseFloat(v) || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2});
+}
+function fmtDataVT(iso) {
+    if (!iso) return '—';
+    const [a,m,d] = iso.split('-');
+    return `${d}/${m}/${a}`;
+}
+
+// ---------- Persistência ----------
+const CHAVE_ORCAMENTOS_VT = 'orcamentosVisita_Alma';
+const CHAVE_CLIENTES_OS = 'clientesOS_Alma';
+
+let orcamentos = [];
+let contadorVT = 1;
+let orcamentoEditandoId = null;
+let clientesOS = [];
+
+function carregarOrcamentosVT() {
+    try {
+        const bruto = localStorage.getItem(CHAVE_ORCAMENTOS_VT);
+        const dados = bruto ? JSON.parse(bruto) : null;
+        orcamentos = dados && Array.isArray(dados.orcamentos) ? dados.orcamentos : [];
+        contadorVT = (dados && dados.contador) || 1;
+    } catch (e) { orcamentos = []; contadorVT = 1; }
+}
+function salvarOrcamentosVTLocal() {
+    const payload = { orcamentos, contador: contadorVT };
+    try { localStorage.setItem(CHAVE_ORCAMENTOS_VT, JSON.stringify(payload)); } catch (e) {}
+    AlmaNuvem.salvar('visita_dados', payload);
+}
+
+async function carregarClientesParaSelectVT() {
+    try {
+        const bruto = localStorage.getItem(CHAVE_CLIENTES_OS);
+        const dados = bruto ? JSON.parse(bruto) : null;
+        clientesOS = dados && Array.isArray(dados.clientes) ? dados.clientes : [];
+    } catch (e) { clientesOS = []; }
+    const dadosNuvem = await AlmaNuvem.carregar('os_clientes');
+    if (dadosNuvem && Array.isArray(dadosNuvem.clientes)) {
+        clientesOS = dadosNuvem.clientes;
+    }
+    const sel = document.getElementById('vtClienteSelect');
+    const ordenados = clientesOS.slice().sort((a,b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+    sel.innerHTML = '<option value="">— Selecionar cliente cadastrado (opcional) —</option>' +
+        ordenados.map(c => `<option value="${c.id}">${escapeAttrVT(c.nome)}</option>`).join('');
+}
+function preencherClienteSelecionado() {
+    const id = Number(document.getElementById('vtClienteSelect').value);
+    if (!id) return;
+    const c = clientesOS.find(x => x.id === id);
+    if (!c) return;
+    document.getElementById('vtClienteNome').value = c.nome || '';
+    document.getElementById('vtClienteTelefone').value = c.celular || '';
+    document.getElementById('vtClienteCpf').value = c.doc || '';
+}
+
+// ---------- Cálculo ----------
+function calcularVT() {
+    const distancia = parseFloat(document.getElementById('vtDistancia').value) || 0;
+    const valorKm = parseFloat(document.getElementById('vtValorKm').value) || 0;
+    const subDeslocamento = distancia * valorKm;
+    document.getElementById('vtSubtotalDeslocamento').value = fmtMoedaVT(subDeslocamento);
+
+    const valorDiaria = parseFloat(document.getElementById('vtValorDiaria').value) || 0;
+    const qtdDias = parseFloat(document.getElementById('vtQtdDias').value) || 0;
+    const subDiarias = valorDiaria * qtdDias;
+    document.getElementById('vtSubtotalDiarias').value = fmtMoedaVT(subDiarias);
+
+    const despesas = parseFloat(document.getElementById('vtDespesasValor').value) || 0;
+
+    const total = subDeslocamento + subDiarias + despesas;
+    document.getElementById('vtTotalGeral').textContent = fmtMoedaVT(total);
+    document.getElementById('vtAutorizoTexto').textContent = `"Autorizo a visita técnica no valor de ${fmtMoedaVT(total)}."`;
+    return total;
+}
+
+// ---------- Coletar / preencher formulário ----------
+function coletarFormularioVT() {
+    return {
+        clienteId: document.getElementById('vtClienteSelect').value ? Number(document.getElementById('vtClienteSelect').value) : null,
+        clienteNome: document.getElementById('vtClienteNome').value.trim(),
+        clienteTelefone: document.getElementById('vtClienteTelefone').value.trim(),
+        clienteCpf: document.getElementById('vtClienteCpf').value.trim(),
+        responsavel: document.getElementById('vtResponsavel').value.trim(),
+        localVisita: document.getElementById('vtLocalVisita').value.trim(),
+        dataVisita: document.getElementById('vtDataVisita').value,
+        origem: document.getElementById('vtOrigem').value.trim(),
+        descricao: document.getElementById('vtDescricao').value.trim(),
+        distancia: parseFloat(document.getElementById('vtDistancia').value) || 0,
+        valorKm: parseFloat(document.getElementById('vtValorKm').value) || 0,
+        valorDiaria: parseFloat(document.getElementById('vtValorDiaria').value) || 0,
+        qtdDias: parseFloat(document.getElementById('vtQtdDias').value) || 0,
+        percentualFechamento: parseFloat(document.getElementById('vtPercentualFechamento').value) || 0,
+        despesasDescricao: document.getElementById('vtDespesasDescricao').value.trim(),
+        despesasValor: parseFloat(document.getElementById('vtDespesasValor').value) || 0,
+        percEntrada: parseFloat(document.getElementById('vtPercEntrada').value) || 0,
+        percFinal: parseFloat(document.getElementById('vtPercFinal').value) || 0,
+        validadeDias: parseInt(document.getElementById('vtValidadeDias').value, 10) || 7,
+        dataOrcamento: document.getElementById('vtDataOrcamento').value,
+    };
+}
+function calcularTotalVT(o) {
+    return (o.distancia * o.valorKm) + (o.valorDiaria * o.qtdDias) + (o.despesasValor || 0);
+}
+function preencherFormularioVT(o) {
+    document.getElementById('vtClienteSelect').value = o.clienteId || '';
+    document.getElementById('vtClienteNome').value = o.clienteNome || '';
+    document.getElementById('vtClienteTelefone').value = o.clienteTelefone || '';
+    document.getElementById('vtClienteCpf').value = o.clienteCpf || '';
+    document.getElementById('vtResponsavel').value = o.responsavel || 'Aguilar Leão Mota';
+    document.getElementById('vtLocalVisita').value = o.localVisita || '';
+    document.getElementById('vtDataVisita').value = o.dataVisita || '';
+    document.getElementById('vtOrigem').value = o.origem || 'Rio Verde - GO';
+    document.getElementById('vtDescricao').value = o.descricao || '';
+    document.getElementById('vtDistancia').value = o.distancia || '';
+    document.getElementById('vtValorKm').value = o.valorKm || 2;
+    document.getElementById('vtValorDiaria').value = o.valorDiaria || 500;
+    document.getElementById('vtQtdDias').value = o.qtdDias || 1;
+    document.getElementById('vtPercentualFechamento').value = o.percentualFechamento || 4;
+    document.getElementById('vtDespesasDescricao').value = o.despesasDescricao || '';
+    document.getElementById('vtDespesasValor').value = o.despesasValor || 0;
+    document.getElementById('vtPercEntrada').value = o.percEntrada || 50;
+    document.getElementById('vtPercFinal').value = o.percFinal || 50;
+    document.getElementById('vtValidadeDias').value = o.validadeDias || 7;
+    document.getElementById('vtDataOrcamento').value = o.dataOrcamento || '';
+    document.getElementById('numeroVT').textContent = o.numero || '—';
+    calcularVT();
+}
+
+// ---------- Ações principais ----------
+function novoOrcamentoVT() {
+    orcamentoEditandoId = null;
+    document.getElementById('vtClienteSelect').value = '';
+    document.getElementById('vtClienteNome').value = '';
+    document.getElementById('vtClienteTelefone').value = '';
+    document.getElementById('vtClienteCpf').value = '';
+    document.getElementById('vtResponsavel').value = 'Aguilar Leão Mota';
+    document.getElementById('vtLocalVisita').value = '';
+    document.getElementById('vtOrigem').value = 'Rio Verde - GO';
+    document.getElementById('vtDescricao').value = 'Visita técnica e demonstração de implemento agrícola, incluindo apresentação da máquina, esclarecimento de dúvidas e avaliação local.';
+    document.getElementById('vtDistancia').value = '';
+    document.getElementById('vtValorKm').value = 2;
+    document.getElementById('vtValorDiaria').value = 500;
+    document.getElementById('vtQtdDias').value = 1;
+    document.getElementById('vtPercentualFechamento').value = 4;
+    document.getElementById('vtDespesasDescricao').value = '';
+    document.getElementById('vtDespesasValor').value = 0;
+    document.getElementById('vtPercEntrada').value = 50;
+    document.getElementById('vtPercFinal').value = 50;
+    document.getElementById('vtValidadeDias').value = 7;
+    document.getElementById('vtDataVisita').valueAsDate = new Date();
+    document.getElementById('vtDataOrcamento').valueAsDate = new Date();
+    document.getElementById('numeroVT').textContent = '—';
+    calcularVT();
+}
+
+function salvarOrcamentoVT() {
+    const dados = coletarFormularioVT();
+    if (!dados.clienteNome) { alert('Preencha ao menos o nome do cliente.'); return; }
+    let o;
+    if (orcamentoEditandoId) {
+        o = orcamentos.find(x => x.id === orcamentoEditandoId);
+    }
+    if (!o) {
+        o = { id: Date.now(), numero: null };
+        orcamentos.push(o);
+        orcamentoEditandoId = o.id;
+    }
+    Object.assign(o, dados);
+    if (!o.numero) {
+        o.numero = 'VT-' + String(contadorVT).padStart(4, '0');
+        contadorVT++;
+    }
+    AlmaNuvem.registrar('visita', 'orcamento', 'salvar', o.id, o.clienteNome);
+    salvarOrcamentosVTLocal();
+    document.getElementById('numeroVT').textContent = o.numero;
+    renderOrcamentosVT();
+    alert('Orçamento salvo com sucesso — Nº ' + o.numero + '.');
+}
+
+function editarOrcamentoVT(id) {
+    const o = orcamentos.find(x => x.id === id);
+    if (!o) return;
+    orcamentoEditandoId = id;
+    preencherFormularioVT(o);
+    irParaPaginaVT('novo');
+}
+
+function excluirOrcamentoVT(id) {
+    if (!confirm('Excluir este orçamento salvo? Essa ação não pode ser desfeita.')) return;
+    const o = orcamentos.find(x => x.id === id);
+    AlmaNuvem.registrar('visita', 'orcamento', 'excluir', id, o ? o.clienteNome : '');
+    orcamentos = orcamentos.filter(x => x.id !== id);
+    if (orcamentoEditandoId === id) orcamentoEditandoId = null;
+    salvarOrcamentosVTLocal();
+    renderOrcamentosVT();
+}
+
+function imprimirOrcamentoVT() {
+    salvarOrcamentoVT();
+    irParaPaginaVT('novo');
+    setTimeout(() => window.print(), 50);
+}
+function imprimirOrcamentoVTDaLista(id) {
+    editarOrcamentoVT(id);
+    setTimeout(() => window.print(), 50);
+}
+
+// ---------- Lista ----------
+function renderOrcamentosVT() {
+    const tbody = document.getElementById('tbodyOrcamentosVT');
+    const vazio = document.getElementById('vazioOrcamentosVT');
+    if (!orcamentos.length) { tbody.innerHTML = ''; vazio.style.display = 'block'; return; }
+    vazio.style.display = 'none';
+    const ordenados = orcamentos.slice().sort((a,b) => (b.dataOrcamento || '').localeCompare(a.dataOrcamento || ''));
+    tbody.innerHTML = ordenados.map(o => `
+        <tr>
+            <td>${escapeAttrVT(o.numero) || '—'}</td>
+            <td>${escapeAttrVT(o.clienteNome) || '—'}</td>
+            <td>${escapeAttrVT(o.localVisita) || '—'}</td>
+            <td>${fmtDataVT(o.dataVisita)}</td>
+            <td>${fmtMoedaVT(calcularTotalVT(o))}</td>
+            <td style="white-space:nowrap;">
+                <button class="btn-acao-resumo" onclick="editarOrcamentoVT(${o.id})" title="Editar">✏️</button>
+                <button class="btn-acao-resumo" onclick="imprimirOrcamentoVTDaLista(${o.id})" title="Imprimir">🖨️</button>
+                <button class="btn-remove" onclick="excluirOrcamentoVT(${o.id})" title="Excluir">×</button>
+            </td>
+        </tr>
+    `).join('');
+}
+
+// ---------- Navegação por abas ----------
+function irParaPaginaVT(nome) {
+    document.querySelectorAll('.pagina-vt').forEach(sec => sec.classList.toggle('ativa', sec.dataset.pagina === nome));
+    document.querySelectorAll('.tab-btn-os').forEach(btn => btn.classList.toggle('ativa', btn.dataset.pagina === nome));
+}
+document.getElementById('tabs-nav-vt').addEventListener('click', e => {
+    const btn = e.target.closest('.tab-btn-os');
+    if (btn) irParaPaginaVT(btn.dataset.pagina);
+});
+
+// ---------- Inicialização ----------
+async function iniciarApp() {
+    carregarOrcamentosVT();
+    const dadosNuvem = await AlmaNuvem.carregar('visita_dados');
+    if (dadosNuvem && Array.isArray(dadosNuvem.orcamentos)) {
+        orcamentos = dadosNuvem.orcamentos;
+        contadorVT = dadosNuvem.contador || 1;
+        try { localStorage.setItem(CHAVE_ORCAMENTOS_VT, JSON.stringify(dadosNuvem)); } catch (e) {}
+    } else if (orcamentos.length) {
+        AlmaNuvem.salvar('visita_dados', { orcamentos, contador: contadorVT });
+    }
+    renderOrcamentosVT();
+    await carregarClientesParaSelectVT();
+    document.getElementById('vtDataVisita').valueAsDate = new Date();
+    document.getElementById('vtDataOrcamento').valueAsDate = new Date();
+    calcularVT();
+}
+
+function fazerLoginApp() {
+    const email = document.getElementById('loginEmail').value.trim();
+    const senha = document.getElementById('loginSenha').value;
+    const erroEl = document.getElementById('loginErro');
+    const btn = document.getElementById('btn-login');
+    erroEl.textContent = '';
+    btn.disabled = true;
+    btn.textContent = 'Entrando…';
+    AlmaNuvem.login(email, senha).catch(() => {
+        erroEl.textContent = 'E-mail ou senha incorretos.';
+    }).finally(() => {
+        btn.disabled = false;
+        btn.textContent = 'Entrar';
+    });
+}
+document.getElementById('btn-login').addEventListener('click', fazerLoginApp);
+document.getElementById('loginSenha').addEventListener('keydown', e => { if (e.key === 'Enter') fazerLoginApp(); });
+document.getElementById('btn-logout').addEventListener('click', () => AlmaNuvem.logout());
+
+// Esta página não tem tela de login própria de verdade visível por padrão:
+// se não estiver logado, volta pro início sem piscar nada.
+let appIniciado = false;
+AlmaNuvem.aoMudarLogin(user => {
+    if (user) {
+        document.getElementById('app-conteudo').style.display = 'block';
+        if (!appIniciado) { appIniciado = true; iniciarApp(); }
+    } else {
+        window.location.href = 'index.html';
+    }
+});
+</script>
+</body>
+</html>

@@ -21,6 +21,8 @@
     --inventario-dark: #7c3210;
     --contrato: #0f766e;
     --contrato-dark: #0b5852;
+    --visita: #b91c1c;
+    --visita-dark: #7f1d1d;
   }
   *{ box-sizing:border-box; }
   html,body{ margin:0; padding:0; height:100%; }
@@ -46,11 +48,11 @@
   }
   .voltar-menu:hover{ color: var(--os); }
 
-  .tela{ max-width: 1180px; width:100%; text-align:center; }
+  .tela{ max-width: 840px; width:100%; text-align:center; }
 
   .cards{
     display:grid;
-    grid-template-columns: 1fr 1fr 1fr;
+    grid-template-columns: 1fr 1fr;
     gap: 26px;
   }
   .card{
@@ -78,6 +80,7 @@
   .card.os::before{ background: var(--os); }
   .card.inventario::before{ background: var(--inventario); }
   .card.contrato::before{ background: var(--contrato); }
+  .card.visita::before{ background: var(--visita); }
   .card:hover{
     transform: translateY(-4px);
     box-shadow: 0 16px 32px rgba(30,41,59,.18);
@@ -85,6 +88,7 @@
   .card.os:hover{ border-color: var(--os); }
   .card.inventario:hover{ border-color: var(--inventario); }
   .card.contrato:hover{ border-color: var(--contrato); }
+  .card.visita:hover{ border-color: var(--visita); }
 
   .icone{
     width: 86px; height:86px;
@@ -96,6 +100,7 @@
   .card.os .icone{ background: rgba(234,240,254,.9); }
   .card.inventario .icone{ background: rgba(253,241,227,.9); }
   .card.contrato .icone{ background: rgba(228,245,243,.9); }
+  .card.visita .icone{ background: rgba(254,226,226,.9); }
 
   .card h2{
     font-family:'Oswald', sans-serif;
@@ -107,6 +112,7 @@
   .card.os h2{ color: var(--os-dark); }
   .card.inventario h2{ color: var(--inventario-dark); }
   .card.contrato h2{ color: var(--contrato-dark); }
+  .card.visita h2{ color: var(--visita-dark); }
 
   .card p{
     font-size: 14.5px;
@@ -170,6 +176,12 @@
         <div class="icone">📜</div>
         <h2>Contratos de Consignação</h2>
         <p>Gerar, salvar e imprimir contratos de consignação de máquinas.</p>
+      </a>
+
+      <a class="card visita" href="visita.html">
+        <div class="icone">🚐</div>
+        <h2>Orçamento de Visita Técnica</h2>
+        <p>Gerar, salvar e imprimir orçamentos de visita técnica.</p>
       </a>
     </div>
   </div>
