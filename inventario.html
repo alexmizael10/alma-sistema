@@ -7,6 +7,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <style>
     :root { --primary: #1e293b; --secondary: #64748b; --accent: #1e40af; --bg: #ffffff; }
 
@@ -51,6 +52,24 @@
     .login-card button:hover{ background: #1c3a94; }
     .login-card button:disabled{ background: #94a3b8; cursor: not-allowed; }
     .login-erro{ color: #dc2626; font-size: 12.5px; margin-top: 10px; min-height: 16px; }
+
+    /* ---------- Modal do QR Code ---------- */
+    .modal-overlay-qr{
+        position: fixed; inset: 0; background: rgba(15,23,42,.6);
+        display:flex; align-items:center; justify-content:center; padding:20px; z-index: 3000;
+    }
+    .modal-qr-conteudo{
+        background:#fff; border-radius:10px; padding:28px; max-width:340px; width:100%;
+        text-align:center; box-shadow: 0 20px 60px rgba(0,0,0,.3);
+    }
+    .foto-preview{
+        width:64px; height:64px; object-fit:cover; border-radius:4px; border:1px solid #e2e8f0;
+    }
+    .btn-vitrine{
+        font-size:11px; font-weight:700; padding:4px 8px; border-radius:4px; border:none; cursor:pointer;
+    }
+    .btn-vitrine.publicar{ background:#dbeafe; color:#1e40af; }
+    .btn-vitrine.despublicar{ background:#fee2e2; color:#dc2626; }
 
     .container {
         max-width: 900px;
@@ -134,6 +153,11 @@
         <div class="field-group"><label>Valor (R$)</label><input type="number" step="0.01" min="0" id="mqValor" placeholder="0,00"></div>
         <div class="field-group"><label>Entrada no pátio</label><input type="date" id="mqEntrada"></div>
         <div class="field-group" style="grid-column: 1 / -1;"><label>Observações</label><input type="text" id="mqObs"></div>
+        <div class="field-group" style="grid-column: 1 / -1;">
+            <label>Fotos do produto</label>
+            <input type="file" id="mqFotos" accept="image/*" multiple>
+            <div id="mqFotosPreview" style="display:flex; gap:8px; flex-wrap:wrap; margin-top:8px;"></div>
+        </div>
     </div>
     <div class="acoes-inv">
         <button type="button" class="btn-secundario-os" id="btnCancelarEdicaoMaquina" style="display:none;" onclick="cancelarEdicaoMaquina()">Cancelar edição</button>
@@ -142,11 +166,26 @@
 
     <table style="margin-top:34px;">
         <thead>
-            <tr><th>Tipo</th><th>Marca / Modelo</th><th>Ano</th><th>Série</th><th>Horímetro</th><th>Status</th><th>Valor</th><th style="width:80px;"></th></tr>
+            <tr><th>Tipo</th><th>Marca / Modelo</th><th>Ano</th><th>Série</th><th>Horímetro</th><th>Status</th><th>Valor</th><th>Vitrine</th><th style="width:80px;"></th></tr>
         </thead>
         <tbody id="tbodyMaquinas"></tbody>
     </table>
     <div id="vazioMaquinas" style="display:none; text-align:center; color:var(--secondary); padding:30px;">Nenhuma máquina cadastrada ainda.</div>
+</div>
+
+<div id="modal-qr" class="modal-overlay-qr" style="display:none;">
+  <div class="modal-qr-conteudo">
+    <h3 style="margin:0 0 4px;">QR Code da máquina</h3>
+    <p style="font-size:12.5px; color:var(--secondary); margin:0 0 16px;">Envie esse link ou a imagem do QR Code pro cliente. Ele abre a página da máquina, sem precisar de login.</p>
+    <div id="qrcode-container" style="display:flex; justify-content:center; margin-bottom:14px;"></div>
+    <input type="text" id="qrLinkTexto" readonly style="width:100%; box-sizing:border-box; text-align:center; font-size:12px; padding:8px; border:1px solid #e2e8f0; border-radius:4px; margin-bottom:12px;">
+    <div style="display:flex; gap:8px;">
+      <button type="button" id="btn-copiar-link" class="btn-secundario-os" style="flex:1;">Copiar link</button>
+      <button type="button" id="btn-baixar-qr" class="btn-imprimir" style="flex:1; margin:0;">Baixar QR Code</button>
+    </div>
+    <div id="qrCopiadoMsg" style="font-size:12px; color:#16a34a; margin-top:8px; min-height:14px; text-align:center;"></div>
+    <button type="button" id="btn-fechar-qr" style="margin-top:14px; background:none; border:none; color:var(--secondary); cursor:pointer; text-decoration:underline; font-size:12.5px;">Fechar</button>
+  </div>
 </div>
 
 </div>
@@ -209,9 +248,142 @@ const AlmaNuvem = (function(){
   };
 })();
 
+const dbVitrine = firebase.firestore();
+const MAX_FOTOS_POR_MAQUINA = 4;
+
     function escapeAttrOS(s) {
         return String(s ?? '').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
     }
+
+    // ---------- Fotos (comprimidas no navegador, guardadas no Firestore — sem Storage/sem cartão) ----------
+    let fotosNovasBase64 = [];   // fotos recém-selecionadas nesta sessão de edição
+    let fotosExistentes = [];    // fotos que a máquina já tinha (ao editar)
+
+    function comprimirImagem(arquivo, maxLado, qualidade) {
+        return new Promise((resolve, reject) => {
+            const leitor = new FileReader();
+            leitor.onload = e => {
+                const img = new Image();
+                img.onload = () => {
+                    let largura = img.width, altura = img.height;
+                    if (largura > altura && largura > maxLado) {
+                        altura = Math.round(altura * (maxLado / largura));
+                        largura = maxLado;
+                    } else if (altura >= largura && altura > maxLado) {
+                        largura = Math.round(largura * (maxLado / altura));
+                        altura = maxLado;
+                    }
+                    const canvas = document.createElement('canvas');
+                    canvas.width = largura;
+                    canvas.height = altura;
+                    canvas.getContext('2d').drawImage(img, 0, 0, largura, altura);
+                    resolve(canvas.toDataURL('image/jpeg', qualidade));
+                };
+                img.onerror = reject;
+                img.src = e.target.result;
+            };
+            leitor.onerror = reject;
+            leitor.readAsDataURL(arquivo);
+        });
+    }
+
+    document.getElementById('mqFotos').addEventListener('change', async e => {
+        const arquivos = Array.from(e.target.files || []);
+        const espacoLivre = MAX_FOTOS_POR_MAQUINA - fotosExistentes.length;
+        if (arquivos.length > espacoLivre) {
+            alert(`Essa máquina já tem ${fotosExistentes.length} foto(s). No máximo ${MAX_FOTOS_POR_MAQUINA} por máquina — selecionando só as ${Math.max(espacoLivre,0)} primeiras.`);
+        }
+        const aUsar = arquivos.slice(0, Math.max(espacoLivre, 0));
+        document.getElementById('mqFotosPreview').innerHTML = '<span style="font-size:12px; color:var(--secondary);">Preparando fotos…</span>';
+        fotosNovasBase64 = [];
+        for (const arquivo of aUsar) {
+            try {
+                fotosNovasBase64.push(await comprimirImagem(arquivo, 900, 0.6));
+            } catch (e) {}
+        }
+        renderPreviewFotos([...fotosExistentes, ...fotosNovasBase64]);
+    });
+
+    function renderPreviewFotos(urls) {
+        const container = document.getElementById('mqFotosPreview');
+        container.innerHTML = urls.length
+            ? urls.map(u => `<img class="foto-preview" src="${u}">`).join('')
+            : '<span style="font-size:12px; color:var(--secondary);">Nenhuma foto ainda.</span>';
+    }
+
+    async function carregarFotosMaquina(id) {
+        try {
+            const snap = await dbVitrine.collection('fotos_privadas').doc(String(id)).get();
+            return snap.exists && Array.isArray(snap.data().fotos) ? snap.data().fotos : [];
+        } catch (e) { return []; }
+    }
+
+    async function salvarFotosMaquina(id, fotos) {
+        await dbVitrine.collection('fotos_privadas').doc(String(id)).set({ fotos });
+    }
+
+    // ---------- Vitrine pública + QR Code ----------
+    async function gerarQrCode(id) {
+        const m = maquinas.find(x => x.id === id);
+        if (!m) return;
+        const fotos = await carregarFotosMaquina(id);
+        const dadosPublicos = {
+            tipo: m.tipo || '', marca: m.marca || '', modelo: m.modelo || '',
+            ano: m.ano || '', horimetro: m.horimetro || 0, valor: m.valor || 0,
+            obs: m.obs || '', fotos,
+        };
+        try {
+            await dbVitrine.collection('vitrine').doc(String(id)).set(dadosPublicos);
+        } catch (e) {
+            alert('Não foi possível publicar a máquina agora. Verifique sua internet.');
+            return;
+        }
+        m.publicada = true;
+        salvarMaquinasLocal();
+        renderMaquinas();
+
+        const url = window.location.origin + window.location.pathname.replace('inventario.html', 'vitrine.html') + '?id=' + id;
+        document.getElementById('qrLinkTexto').value = url;
+        document.getElementById('qrCopiadoMsg').textContent = '';
+        document.getElementById('qrcode-container').innerHTML = '';
+        new QRCode(document.getElementById('qrcode-container'), { text: url, width: 200, height: 200 });
+        document.getElementById('modal-qr').style.display = 'flex';
+    }
+
+    async function despublicarVitrine(id) {
+        if (!confirm('Remover essa máquina da vitrine pública? O link e o QR Code param de funcionar.')) return;
+        try {
+            await dbVitrine.collection('vitrine').doc(String(id)).delete();
+        } catch (e) {
+            alert('Não foi possível despublicar agora. Verifique sua internet.');
+            return;
+        }
+        const m = maquinas.find(x => x.id === id);
+        if (m) m.publicada = false;
+        salvarMaquinasLocal();
+        renderMaquinas();
+    }
+
+    document.getElementById('btn-fechar-qr').addEventListener('click', () => {
+        document.getElementById('modal-qr').style.display = 'none';
+    });
+    document.getElementById('btn-copiar-link').addEventListener('click', () => {
+        const campo = document.getElementById('qrLinkTexto');
+        campo.select();
+        navigator.clipboard.writeText(campo.value).then(() => {
+            document.getElementById('qrCopiadoMsg').textContent = 'Link copiado!';
+        }).catch(() => {
+            document.getElementById('qrCopiadoMsg').textContent = 'Selecione e copie manualmente.';
+        });
+    });
+    document.getElementById('btn-baixar-qr').addEventListener('click', () => {
+        const canvas = document.querySelector('#qrcode-container canvas');
+        if (!canvas) return;
+        const link = document.createElement('a');
+        link.download = 'qrcode-maquina.png';
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+    });
 
     // ---------- Inventário de Máquinas ----------
     const CHAVE_MAQUINAS = 'maquinasOS_Alma';
@@ -237,13 +409,17 @@ const AlmaNuvem = (function(){
         document.getElementById('mqTipo').value = 'Trator';
         ['mqMarca','mqModelo','mqAno','mqSerie','mqHorimetro','mqValor','mqEntrada','mqObs'].forEach(id => document.getElementById(id).value = '');
         document.getElementById('mqStatus').value = 'Disponível';
+        document.getElementById('mqFotos').value = '';
+        fotosNovasBase64 = [];
+        fotosExistentes = [];
+        renderPreviewFotos([]);
         maquinaEditandoId = null;
         document.getElementById('btnSalvarMaquina').textContent = '💾 Cadastrar máquina';
         document.getElementById('btnCancelarEdicaoMaquina').style.display = 'none';
     }
     function cancelarEdicaoMaquina() { limparFormMaquina(); }
 
-    function salvarMaquina() {
+    async function salvarMaquina() {
         const marca = document.getElementById('mqMarca').value.trim();
         const modelo = document.getElementById('mqModelo').value.trim();
         if (!marca && !modelo) { alert('Preencha ao menos a marca ou o modelo da máquina.'); return; }
@@ -258,23 +434,48 @@ const AlmaNuvem = (function(){
             entrada: document.getElementById('mqEntrada').value,
             obs: document.getElementById('mqObs').value.trim(),
         };
+
+        const btn = document.getElementById('btnSalvarMaquina');
+        const textoOriginal = btn.textContent;
+        let idParaFotos = maquinaEditandoId;
+        let m;
+
         if (maquinaEditandoId) {
-            const m = maquinas.find(x => x.id === maquinaEditandoId);
-            if (m) {
-                Object.assign(m, dados);
-                AlmaNuvem.registrar('inventario', 'maquina', 'editar', m.id, `${dados.marca} ${dados.modelo}`);
-            }
+            m = maquinas.find(x => x.id === maquinaEditandoId);
+            if (m) Object.assign(m, dados);
         } else {
-            const novoId = contadorMaquina++;
-            maquinas.push({ id: novoId, ...dados });
-            AlmaNuvem.registrar('inventario', 'maquina', 'criar', novoId, `${dados.marca} ${dados.modelo}`);
+            idParaFotos = contadorMaquina++;
+            m = { id: idParaFotos, publicada: false, ...dados };
+            maquinas.push(m);
+        }
+
+        const fotosFinais = [...fotosExistentes, ...fotosNovasBase64];
+        if (fotosNovasBase64.length) {
+            btn.disabled = true;
+            btn.textContent = 'Salvando fotos…';
+            try {
+                await salvarFotosMaquina(idParaFotos, fotosFinais);
+            } catch (e) {
+                alert('Não foi possível salvar as fotos agora. Verifique sua internet e tente de novo.');
+            }
+            btn.disabled = false;
+            btn.textContent = textoOriginal;
+        }
+
+        AlmaNuvem.registrar('inventario', 'maquina', maquinaEditandoId ? 'editar' : 'criar', idParaFotos, `${dados.marca} ${dados.modelo}`);
+        if (m.publicada) {
+            // já estava na vitrine: mantém as fotos/infos publicadas em sincronia
+            dbVitrine.collection('vitrine').doc(String(idParaFotos)).set({
+                tipo: m.tipo, marca: m.marca, modelo: m.modelo, ano: m.ano,
+                horimetro: m.horimetro, valor: m.valor, obs: m.obs, fotos: fotosFinais,
+            }).catch(() => {});
         }
         salvarMaquinasLocal();
         limparFormMaquina();
         renderMaquinas();
     }
 
-    function editarMaquina(id) {
+    async function editarMaquina(id) {
         const m = maquinas.find(x => x.id === id);
         if (!m) return;
         maquinaEditandoId = id;
@@ -288,9 +489,16 @@ const AlmaNuvem = (function(){
         document.getElementById('mqValor').value = m.valor || 0;
         document.getElementById('mqEntrada').value = m.entrada || '';
         document.getElementById('mqObs').value = m.obs || '';
+        document.getElementById('mqFotos').value = '';
+        fotosNovasBase64 = [];
         document.getElementById('btnSalvarMaquina').textContent = '💾 Salvar alterações';
         document.getElementById('btnCancelarEdicaoMaquina').style.display = 'inline-block';
         window.scrollTo({ top: 0, behavior: 'smooth' });
+
+        renderPreviewFotos([]);
+        document.getElementById('mqFotosPreview').innerHTML = '<span style="font-size:12px; color:var(--secondary);">Carregando fotos…</span>';
+        fotosExistentes = await carregarFotosMaquina(id);
+        renderPreviewFotos(fotosExistentes);
     }
 
     function excluirMaquina(id) {
@@ -312,6 +520,9 @@ const AlmaNuvem = (function(){
         tbody.innerHTML = maquinas.map(m => {
             const valorFmt = 'R$ ' + (m.valor || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2});
             const cor = cores[m.status] || '#64748b';
+            const vitrineHtml = m.publicada
+                ? `<button class="btn-vitrine despublicar" onclick="despublicarVitrine(${m.id})" title="Tirar do ar">Publicada — tirar</button>`
+                : `<button class="btn-vitrine publicar" onclick="gerarQrCode(${m.id})" title="Gerar link e QR Code">Gerar QR Code</button>`;
             return `
                 <tr>
                     <td>${escapeAttrOS(m.tipo)}</td>
@@ -321,6 +532,7 @@ const AlmaNuvem = (function(){
                     <td>${(m.horimetro || 0).toLocaleString('pt-BR')} h</td>
                     <td><span style="font-weight:700; font-size:0.75rem; color:${cor};">${escapeAttrOS(m.status)}</span></td>
                     <td>${valorFmt}</td>
+                    <td>${vitrineHtml}${m.publicada ? `<br><button class="btn-acao-resumo" style="font-size:11px;" onclick="gerarQrCode(${m.id})">Ver QR</button>` : ''}</td>
                     <td style="white-space:nowrap;">
                         <button class="btn-acao-resumo" onclick="editarMaquina(${m.id})" title="Editar">✏️</button>
                         <button class="btn-remove" onclick="excluirMaquina(${m.id})" title="Excluir">×</button>

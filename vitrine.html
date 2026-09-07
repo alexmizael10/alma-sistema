@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Máquina disponível - ALMA TRATORES</title>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+<style>
+  :root { --primary: #1e293b; --secondary: #64748b; --accent: #1e40af; }
+  * { box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    margin: 0;
+    background: #f1f5f9;
+    color: #1e293b;
+    min-height: 100vh;
+  }
+  .topo {
+    background: var(--primary);
+    color: #fff;
+    padding: 18px 20px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    font-size: 13px;
+  }
+  .container {
+    max-width: 560px;
+    margin: 0 auto;
+    background: #fff;
+    min-height: calc(100vh - 56px);
+  }
+  #carregando, #naoEncontrado {
+    padding: 80px 24px;
+    text-align: center;
+    color: var(--secondary);
+    font-size: 14px;
+  }
+  .galeria {
+    position: relative;
+    background: #e2e8f0;
+  }
+  .galeria img {
+    width: 100%;
+    height: 300px;
+    object-fit: cover;
+    display: block;
+  }
+  .miniaturas {
+    display: flex;
+    gap: 6px;
+    padding: 10px;
+    overflow-x: auto;
+    background: #fff;
+  }
+  .miniaturas img {
+    width: 56px; height: 56px; object-fit: cover; border-radius: 4px;
+    border: 2px solid transparent; cursor: pointer; flex-shrink: 0;
+  }
+  .miniaturas img.ativa { border-color: var(--accent); }
+  .info { padding: 22px 20px 40px; }
+  .tipo-tag {
+    display: inline-block; font-size: 11px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.04em; color: var(--accent); background: #dbeafe;
+    padding: 3px 10px; border-radius: 20px; margin-bottom: 10px;
+  }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  .ano { color: var(--secondary); font-size: 13px; margin-bottom: 18px; }
+  .valor {
+    font-size: 26px; font-weight: 700; color: #16a34a; margin-bottom: 20px;
+  }
+  .specs {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+    border-top: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0;
+    padding: 16px 0; margin-bottom: 18px;
+  }
+  .specs div span { display: block; font-size: 10.5px; text-transform: uppercase; color: var(--secondary); }
+  .specs div b { font-size: 14px; }
+  .obs { font-size: 13.5px; line-height: 1.6; color: #334155; }
+  .sem-foto {
+    height: 220px; display: flex; align-items: center; justify-content: center;
+    color: var(--secondary); font-size: 13px; background: #e2e8f0;
+  }
+</style>
+</head>
+<body>
+
+<div class="topo">🚜 ALMA TRATORES — Inventário</div>
+
+<div class="container">
+  <div id="carregando">Carregando informações da máquina…</div>
+
+  <div id="naoEncontrado" style="display:none;">
+    Essa máquina não está mais disponível ou o link expirou.
+  </div>
+
+  <div id="conteudo" style="display:none;">
+    <div class="galeria">
+      <img id="fotoPrincipal" src="" style="display:none;">
+      <div id="semFoto" class="sem-foto" style="display:none;">Sem fotos disponíveis</div>
+    </div>
+    <div id="miniaturas" class="miniaturas"></div>
+
+    <div class="info">
+      <span class="tipo-tag" id="tipoTag"></span>
+      <h1 id="titulo"></h1>
+      <div class="ano" id="anoTexto"></div>
+      <div class="valor" id="valorTexto"></div>
+
+      <div class="specs">
+        <div><span>Horímetro</span><b id="specHorimetro"></b></div>
+        <div><span>Série / Chassi</span><b id="specSerie"></b></div>
+      </div>
+
+      <div class="obs" id="obsTexto"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyAkTfgLDLIe7q7n3Pzix_50Sz-hMiyAlkU",
+    authDomain: "sistema-alma-tratores.firebaseapp.com",
+    projectId: "sistema-alma-tratores",
+    storageBucket: "sistema-alma-tratores.firebasestorage.app",
+    messagingSenderId: "904624946557",
+    appId: "1:904624946557:web:87ba09360ffbd187156014"
+  };
+  if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+  const db = firebase.firestore();
+
+  function escapeAttr(s) {
+    return String(s ?? '').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
+  }
+
+  function trocarFoto(url) {
+    document.getElementById('fotoPrincipal').src = url;
+    document.querySelectorAll('.miniaturas img').forEach(img => {
+      img.classList.toggle('ativa', img.src === url);
+    });
+  }
+
+  function renderizar(m) {
+    document.getElementById('tipoTag').textContent = m.tipo || 'Máquina';
+    document.getElementById('titulo').textContent = [m.marca, m.modelo].filter(Boolean).join(' ') || 'Máquina disponível';
+    document.getElementById('anoTexto').textContent = m.ano ? ('Ano ' + m.ano) : '';
+    document.getElementById('valorTexto').textContent = m.valor
+      ? 'R$ ' + Number(m.valor).toLocaleString('pt-BR', {minimumFractionDigits: 2})
+      : 'Consulte o valor';
+    document.getElementById('specHorimetro').textContent = (m.horimetro || 0).toLocaleString('pt-BR') + ' h';
+    document.getElementById('specSerie').textContent = m.serie || 'Não informado';
+    document.getElementById('obsTexto').textContent = m.obs || '';
+
+    const fotos = Array.isArray(m.fotos) ? m.fotos : [];
+    if (fotos.length) {
+      document.getElementById('fotoPrincipal').src = fotos[0];
+      document.getElementById('fotoPrincipal').style.display = 'block';
+      document.getElementById('semFoto').style.display = 'none';
+      document.getElementById('miniaturas').innerHTML = fotos.map((url, i) =>
+        `<img src="${escapeAttr(url)}" class="${i === 0 ? 'ativa' : ''}" onclick="trocarFoto('${escapeAttr(url)}')">`
+      ).join('');
+    } else {
+      document.getElementById('semFoto').style.display = 'flex';
+    }
+
+    document.getElementById('carregando').style.display = 'none';
+    document.getElementById('conteudo').style.display = 'block';
+  }
+
+  function mostrarNaoEncontrado() {
+    document.getElementById('carregando').style.display = 'none';
+    document.getElementById('naoEncontrado').style.display = 'block';
+  }
+
+  async function carregar() {
+    const params = new URLSearchParams(window.location.search);
+    const id = params.get('id');
+    if (!id) { mostrarNaoEncontrado(); return; }
+    try {
+      const snap = await db.collection('vitrine').doc(id).get();
+      if (!snap.exists) { mostrarNaoEncontrado(); return; }
+      renderizar(snap.data());
+    } catch (e) {
+      mostrarNaoEncontrado();
+    }
+  }
+  carregar();
+</script>
+</body>
+</html>
