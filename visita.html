@@ -49,7 +49,13 @@
     .title-area { text-align: right; width: 40%; }
     .title-area h1 { font-size: 1.3rem; color: var(--primary); margin: 0; letter-spacing: -0.5px; }
     .vt-number { font-size: 1.4rem; color: var(--accent); font-weight: bold; margin: 5px 0; }
+    .vt-number.rascunho { color: var(--secondary); font-size: 1.05rem; letter-spacing: 0.04em; }
     .data-vt { font-size: 0.8rem; font-weight: bold; color: var(--secondary); text-transform: uppercase; }
+
+    /* ---------- Caixa alta em todos os campos de texto (visual) ---------- */
+    input, textarea, select { text-transform: uppercase; }
+    input[type="email"], input[type="password"] { text-transform: none; }
+    input::placeholder, textarea::placeholder { text-transform: none; }
 
     h3 { color: var(--primary); font-size: 1rem; border-bottom: 2px solid #f1f5f9; padding-bottom: 8px; margin-top: 34px; }
     .clausula-fixa { font-size: 0.78rem; color: var(--secondary); font-style: italic; margin: -8px 0 14px; }
@@ -188,8 +194,12 @@
         </div>
         <div class="title-area">
             <h1>ORÇAMENTO<br>VISITA TÉCNICA</h1>
-            <div class="vt-number">Nº <span id="numeroVT">—</span></div>
+            <div class="vt-number rascunho" id="vtNumeroLinha">Nº <span id="numeroVT">RASCUNHO</span></div>
             <div class="data-vt">DATA: <input type="date" id="vtDataOrcamento" style="width: 140px; border:none; background:transparent; font-weight: bold; text-align: right; padding:0;"></div>
+            <label class="no-print-btn" style="display:flex; align-items:center; gap:6px; justify-content:flex-end; font-size:11px; font-weight:700; text-transform:uppercase; color:var(--secondary); margin-top:8px;">
+                <input type="checkbox" id="vtAutorizado" onchange="atualizarNumeroPreviewVT()">
+                Cliente autorizou (gera número)
+            </label>
         </div>
     </div>
 
@@ -243,7 +253,10 @@
     </div>
 
     <div class="mapa-bloco">
-        <div class="mapa-barra">
+        <div class="mapa-barra" style="flex-wrap:wrap;">
+            <input type="text" id="vt-busca-mapa" placeholder="Buscar cidade no mapa..." style="flex:1; min-width:160px; padding:7px 10px; border:1px solid #e2e8f0; border-radius:6px; font-size:12.5px;">
+            <button type="button" class="btn-icone-mapa" id="vt-btn-buscar-mapa" title="Buscar no mapa">🔍</button>
+            <span class="separador" style="flex-basis:100%; height:0;"></span>
             <button type="button" class="modo-btn origem" id="vt-btn-modo-origem"><span class="ponto"></span>Marcar origem no mapa</button>
             <button type="button" class="modo-btn destino" id="vt-btn-modo-destino"><span class="ponto"></span>Marcar destino no mapa</button>
             <span class="separador"></span>
@@ -633,14 +646,20 @@ async function definirPontoVT(tipo, lat, lon, opcoes){
         }
     }
 
+    const campo = tipo === 'origem' ? inputOrigemVT : inputDestinoVT;
     if (opcoes.atualizarCampo){
-        const campo = tipo === 'origem' ? inputOrigemVT : inputDestinoVT;
+        // mostra as coordenadas só como valor temporário, até resolver o nome da cidade abaixo
         campo.value = `${lat.toFixed(6)}, ${lon.toFixed(6)}`;
     }
 
     const rotuloEl = document.getElementById(tipo === 'origem' ? 'vt-rotulo-origem' : 'vt-rotulo-destino');
     rotuloEl.textContent = 'localizando…';
-    reverseGeocodeVT(lat, lon).then(nome => { rotuloEl.textContent = nome || `${lat.toFixed(5)}, ${lon.toFixed(5)}`; });
+    reverseGeocodeVT(lat, lon).then(nome => {
+        rotuloEl.textContent = nome || `${lat.toFixed(5)}, ${lon.toFixed(5)}`;
+        if (opcoes.atualizarCampo && nome){
+            campo.value = nome;
+        }
+    });
 
     ajustarZoomMarcadoresVT();
     if (opcoes.atualizarCampo){
@@ -658,15 +677,39 @@ function ajustarZoomMarcadoresVT(){
     else if (pontos.length === 2) mapaVT.fitBounds(L.latLngBounds(pontos), { padding: [40,40] });
 }
 
+// Converte lat/lon num nome de cidade legível (Cidade, Estado), em vez de números
 async function reverseGeocodeVT(lat, lon){
     try{
-        const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=14`;
+        const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=10&addressdetails=1`;
         const resp = await fetch(url);
         if(!resp.ok) return null;
         const data = await resp.json();
+        const a = data.address || {};
+        const cidade = a.city || a.town || a.village || a.municipality || a.county;
+        const estado = a.state;
+        if (cidade && estado) return `${cidade}, ${estado}`;
         return data.display_name || null;
     }catch(e){ return null; }
 }
+
+// ---------- Busca de local no mapa (não marca ponto, só centraliza a visão) ----------
+async function buscarNoMapaVT(){
+    if (!mapaDisponivelVT) return;
+    const campo = document.getElementById('vt-busca-mapa');
+    const texto = campo.value.trim();
+    if (!texto) return;
+    const btn = document.getElementById('vt-btn-buscar-mapa');
+    const original = btn.textContent;
+    btn.textContent = '…';
+    const coords = await obterCoordenadasVT(texto);
+    btn.textContent = original;
+    if (!coords){ alert('Local não encontrado. Tente um nome de cidade mais específico.'); return; }
+    mapaVT.setView([coords.lat, coords.lon], 12);
+}
+document.getElementById('vt-btn-buscar-mapa').addEventListener('click', buscarNoMapaVT);
+document.getElementById('vt-busca-mapa').addEventListener('keydown', e => {
+    if (e.key === 'Enter'){ e.preventDefault(); buscarNoMapaVT(); }
+});
 
 function agendarPreviewVT(){
     clearTimeout(previewDebounceVT);
@@ -826,6 +869,7 @@ function coletarFormularioVT() {
         clienteNome: document.getElementById('vtClienteNome').value.trim(),
         clienteTelefone: document.getElementById('vtClienteTelefone').value.trim(),
         clienteCpf: document.getElementById('vtClienteCpf').value.trim(),
+        autorizado: document.getElementById('vtAutorizado').checked,
         responsavel: document.getElementById('vtResponsavel').value.trim(),
         localVisita: document.getElementById('vtLocalVisita').value.trim(),
         dataVisita: document.getElementById('vtDataVisita').value,
@@ -857,6 +901,7 @@ function preencherFormularioVT(o) {
     document.getElementById('vtClienteNome').value = o.clienteNome || '';
     document.getElementById('vtClienteTelefone').value = o.clienteTelefone || '';
     document.getElementById('vtClienteCpf').value = o.clienteCpf || '';
+    document.getElementById('vtAutorizado').checked = !!o.autorizado;
     document.getElementById('vtResponsavel').value = o.responsavel || 'Aguilar Leão Mota';
     document.getElementById('vtLocalVisita').value = o.localVisita || '';
     document.getElementById('vtDataVisita').value = o.dataVisita || '';
@@ -880,7 +925,7 @@ function preencherFormularioVT(o) {
     document.getElementById('vtPercFinal').value = o.percFinal || 50;
     document.getElementById('vtValidadeDias').value = o.validadeDias || 7;
     document.getElementById('vtDataOrcamento').value = o.dataOrcamento || '';
-    document.getElementById('numeroVT').textContent = o.numero || '—';
+    atualizarNumeroPreviewVT();
     calcularVT();
 }
 
@@ -891,6 +936,7 @@ function novoOrcamentoVT() {
     document.getElementById('vtClienteNome').value = '';
     document.getElementById('vtClienteTelefone').value = '';
     document.getElementById('vtClienteCpf').value = '';
+    document.getElementById('vtAutorizado').checked = false;
     document.getElementById('vtResponsavel').value = 'Aguilar Leão Mota';
     document.getElementById('vtLocalVisita').value = '';
     document.getElementById('vtOrigem').value = 'Rio Verde - GO';
@@ -914,7 +960,7 @@ function novoOrcamentoVT() {
     document.getElementById('vtValidadeDias').value = 7;
     document.getElementById('vtDataVisita').valueAsDate = new Date();
     document.getElementById('vtDataOrcamento').valueAsDate = new Date();
-    document.getElementById('numeroVT').textContent = '—';
+    atualizarNumeroPreviewVT();
     calcularVT();
 }
 
@@ -931,15 +977,36 @@ function salvarOrcamentoVT() {
         orcamentoEditandoId = o.id;
     }
     Object.assign(o, dados);
-    if (!o.numero) {
+    if (dados.autorizado && !o.numero) {
         o.numero = 'VT-' + String(contadorVT).padStart(4, '0');
         contadorVT++;
     }
     AlmaNuvem.registrar('visita', 'orcamento', 'salvar', o.id, o.clienteNome);
     salvarOrcamentosVTLocal();
-    document.getElementById('numeroVT').textContent = o.numero;
+    atualizarNumeroPreviewVT();
     renderOrcamentosVT();
-    alert('Orçamento salvo com sucesso — Nº ' + o.numero + '.');
+    alert('Orçamento salvo com sucesso' + (o.numero ? (' — Nº ' + o.numero) : ' (como rascunho)') + '.');
+}
+
+// Mostra o número real se já existir, ou uma prévia (ainda não gravada) quando "autorizado" está marcado
+function atualizarNumeroPreviewVT() {
+    const numeroEl = document.getElementById('numeroVT');
+    const linhaEl = document.getElementById('vtNumeroLinha');
+    const autorizado = document.getElementById('vtAutorizado').checked;
+    const editando = orcamentoEditandoId ? orcamentos.find(o => o.id === orcamentoEditandoId) : null;
+
+    if (editando && editando.numero) {
+        numeroEl.textContent = editando.numero;
+        linhaEl.classList.remove('rascunho');
+        return;
+    }
+    if (autorizado) {
+        numeroEl.textContent = 'VT-' + String(contadorVT).padStart(4, '0');
+        linhaEl.classList.remove('rascunho');
+    } else {
+        numeroEl.textContent = 'RASCUNHO';
+        linhaEl.classList.add('rascunho');
+    }
 }
 
 function editarOrcamentoVT(id) {
@@ -979,7 +1046,7 @@ function renderOrcamentosVT() {
     const ordenados = orcamentos.slice().sort((a,b) => (b.dataOrcamento || '').localeCompare(a.dataOrcamento || ''));
     tbody.innerHTML = ordenados.map(o => `
         <tr>
-            <td>${escapeAttrVT(o.numero) || '—'}</td>
+            <td>${escapeAttrVT(o.numero) || 'RASCUNHO'}</td>
             <td>${escapeAttrVT(o.clienteNome) || '—'}</td>
             <td>${escapeAttrVT(o.localVisita) || '—'}</td>
             <td>${fmtDataVT(o.dataVisita)}</td>
@@ -1024,6 +1091,7 @@ async function iniciarApp() {
     }
     document.getElementById('vtDataVisita').valueAsDate = new Date();
     document.getElementById('vtDataOrcamento').valueAsDate = new Date();
+    atualizarNumeroPreviewVT();
     calcularVT();
 }
 
